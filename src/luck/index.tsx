@@ -1,5 +1,5 @@
 /**
- * Fachada do Luck Design System no Phone Deck.
+ * Fachada do Luck Design System na Bancada.
  *
  * Os componentes `Luck*` seguem nomes e props do `@welllucky/luck-react`. Enquanto o pacote não pode ser
  * instalado (registro privado do GitHub Packages), eles são implementados aqui com os tokens do Luck;

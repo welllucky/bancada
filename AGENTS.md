@@ -1,6 +1,6 @@
-# AGENTS.md — Phone Deck
+# AGENTS.md — Bancada (antigo Phone Deck)
 
-App desktop nativo (Tauri 2: Rust + React/TS no WebView do SO) que inspeciona e controla um Android conectado por USB via `adb`. Alvos: Linux, macOS, Windows a partir do mesmo código. UI em pt-BR. Tudo local: sem telemetria, sem rede além do `adb`. Única exceção: procurar/baixar atualização do próprio app nas releases do GitHub (`src-tauri/src/update.rs`), procura ao abrir (falha silenciosa) e instala só com confirmação.
+App desktop nativo (Tauri 2: Rust + React/TS no WebView do SO) que inspeciona e controla um Android conectado por USB via `adb`. Alvos: Linux, macOS, Windows a partir do mesmo código. UI em pt-BR. Nome do produto: **Bancada** (marca em `docs/marca/`); repositório, crates e `identifier` (`dev.wellington.phonedeck`) seguem com o nome antigo para não perder dados nem quebrar o atualizador. Tudo local: sem telemetria, sem rede além do `adb`. Única exceção: procurar/baixar atualização do próprio app nas releases do GitHub (`src-tauri/src/update.rs`), procura ao abrir (falha silenciosa) e instala só com confirmação.
 
 Visão de produto e instruções de uso para humanos: `README.md`. Este arquivo cobre o que o código não conta sozinho.
 

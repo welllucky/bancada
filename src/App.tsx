@@ -179,10 +179,9 @@ export default function App() {
       <div className="shell">
         <nav className="rail" aria-label="Navegação principal">
           <div className="brand">
-            <div className="brand-mark" aria-hidden><Smartphone size={18} /></div>
+            <img className="brand-mark" src="/bancada.svg" alt="" aria-hidden />
             <div className="brand-text">
-              <strong>Phone Deck</strong>
-              <span>visão e controle via USB</span>
+              <strong>Bancada</strong>
             </div>
           </div>
           {NAV.map((n) => (
@@ -283,16 +282,16 @@ function ConnectScreen({ polled, adbError, found, pending, children }: { polled:
   return (
     <div className="connect">
       <div className="connect-head">
-        <div className="brand-mark lg" aria-hidden><Smartphone size={24} /></div>
+        <img className="brand-mark lg" src="/bancada.svg" alt="" aria-hidden />
         <h1>{pending ? "Falta um passo para conectar" : "Conecte seu Android pelo cabo USB"}</h1>
-        <p className="muted">O Phone Deck lê o aparelho pelo adb, sem root e sem enviar nada para a internet.</p>
+        <p className="muted">A Bancada lê o aparelho pelo adb, sem root e sem enviar nada para a internet.</p>
       </div>
       <LuckCard heading="Conectando" index={`${[s1, s2, s3].filter((s) => s === "done").length}/3`} hint="verificando a cada 3 s" padded={false} style={{ width: "min(560px, 100%)" }}>
         <Steps>
           <Step state={s1} title={adbOk ? "adb encontrado" : "Procurando o adb"}>
             {adbError && (
               <div className="muted small">
-                {noIpc ? "Abra pelo aplicativo Phone Deck: o navegador não acessa o adb." : <>Instale as ferramentas do Android (<code>android-tools</code> / <code>adb</code>) ou defina a variável <code>ADB</code>.</>}
+                {noIpc ? "Abra pelo aplicativo Bancada: o navegador não acessa o adb." : <>Instale as ferramentas do Android (<code>android-tools</code> / <code>adb</code>) ou defina a variável <code>ADB</code>.</>}
                 <code className="l-evidence" style={{ display: "block" }}>{adbError}</code>
               </div>
             )}

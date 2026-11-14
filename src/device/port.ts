@@ -37,7 +37,7 @@ export interface DeviceApi {
   appMeta(serial: string, pkg: string): Promise<AppMeta>;
   /** Nomes já guardados no catálogo local, sem tocar no aparelho. */
   appLabels(): Promise<Record<string, string>>;
-  /** Procura versão nova do Phone Deck (a única chamada de rede fora do adb; só quando a pessoa permite). */
+  /** Procura versão nova da Bancada (a única chamada de rede fora do adb; só quando a pessoa permite). */
   updateCheck(): Promise<UpdateInfo>;
   /** Versão instalada, sem tocar na rede. */
   appVersion(): Promise<string>;

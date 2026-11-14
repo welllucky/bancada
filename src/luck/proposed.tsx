@@ -1,5 +1,5 @@
 /**
- * Componentes que o Phone Deck precisa e que o Luck ainda não tem. Ficam com a mesma linguagem
+ * Componentes que a Bancada precisa e que o Luck ainda não tem. Ficam com a mesma linguagem
  * (tokens, teclas, poços) para virarem contribuições ao design system: `luck-issue`, `luck-banner`,
  * `luck-steps`, `luck-table`, variante segmentada do `luck-radio-group`.
  */

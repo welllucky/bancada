@@ -1,4 +1,4 @@
-/* Layout do Phone Deck sobre os tokens do Luck (definidos em src/luck/luck.css). */
+/* Layout da Bancada sobre os tokens do Luck (definidos em src/luck/luck.css). */
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; }
@@ -51,14 +51,10 @@ button { font: inherit; color: inherit; }
   padding: 18px 12px; background: var(--surface-1); border-right: 1px solid var(--border);
 }
 .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 18px; }
-.brand-mark {
-  width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: var(--radius-lg);
-  background: var(--accent); color: var(--on-accent); box-shadow: var(--shadow-key-accent);
-}
-.brand-mark.lg { width: 52px; height: 52px; border-radius: var(--radius-xl); }
+.brand-mark { width: 36px; height: 36px; flex: none; display: block; }
+.brand-mark.lg { width: 64px; height: 64px; }
 .brand-text { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
-.brand-text strong { font-size: 15px; letter-spacing: var(--tracking-tight); }
-.brand-text span { font-size: var(--text-micro); color: var(--fg-faint); font-family: var(--font-mono); letter-spacing: .02em; }
+.brand-text strong { font-size: 18px; font-weight: 800; letter-spacing: var(--tracking-tight); }
 .nav-item {
   display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; border: 0; border-radius: var(--radius-md);
   background: none; color: var(--fg-muted); cursor: pointer; text-align: left; font-weight: 600;
