@@ -266,3 +266,8 @@ export interface NetLive { t: number; ifaces: NetIface[] }
 
 /** Nome e ícone (`data:` URL) lidos do APK. */
 export interface AppMeta { label: string | null; icon: string | null }
+
+/** Linha do tempo de um app desde a última carga (ms). Ver `apptimeline.rs`. */
+export interface TimelineSpan { kind: "top" | "fg" | "job" | "sync" | "wake_lock" | "longwake"; start: number; end: number; tag: string; screen_off: boolean }
+export interface TimelineMark { kind: "wakeupap" | "tmpwhitelist"; t: number; tag: string; screen_off: boolean }
+export interface AppTimeline { start: number | null; end: number | null; screen_off: [number, number][]; spans: TimelineSpan[]; marks: TimelineMark[] }

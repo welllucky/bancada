@@ -1,6 +1,6 @@
 import type { DeviceApi } from "./port";
 import { logLabel } from "../actions";
-import type { NetApp, NetSocket } from "./types";
+import type { NetApp, NetSocket, AppTimeline } from "./types";
 import type { Action, AppEntry, BatteryStats, HistoryData, Recommendation } from "./types";
 
 /**
@@ -358,6 +358,29 @@ export const mockAdapter: DeviceApi = {
   // A demonstração não tem APKs: a UI mostra a inicial do nome.
   appMeta: () => wait({ label: null, icon: null }, 40),
   appLabels: () => wait({}, 10),
+  appTimeline: (_serial, pkg) => {
+    // 8 h de demonstração: uso à noite, depois tela desligada com tarefas, alarmes e push acordando o app.
+    const end = Date.now();
+    const start = end - 8 * 3600_000;
+    const at = (h: number) => start + h * 3600_000;
+    const heavy = pkg === "com.whatsapp" ? 1 : 0.4;
+    const screen_off: [number, number][] = [[at(0.6), at(2.1)], [at(2.3), at(7.2)], [at(7.5), end]];
+    const spans: AppTimeline["spans"] = [
+      { kind: "top", start: at(0.1), end: at(0.35), tag: pkg, screen_off: false },
+      { kind: "top", start: at(2.15), end: at(2.25), tag: pkg, screen_off: false },
+      { kind: "top", start: at(7.25), end: at(7.4), tag: pkg, screen_off: false },
+    ];
+    const marks: AppTimeline["marks"] = [];
+    for (let h = 0.8; h < 7.9; h += 0.55 / heavy) {
+      const off = screen_off.some(([a, b]) => at(h) >= a && at(h) <= b);
+      spans.push({ kind: "job", start: at(h), end: at(h) + 25_000, tag: `${pkg}/androidx.work.impl.background.systemjob.SystemJobService`, screen_off: off });
+      if (Math.round(h * 10) % 3 === 0) spans.push({ kind: "wake_lock", start: at(h), end: at(h) + 40_000, tag: `*job*/${pkg}/SystemJobService`, screen_off: off });
+      if (Math.round(h * 10) % 4 === 0) marks.push({ kind: "wakeupap", t: at(h) - 2000, tag: `*walarm*:${pkg}.ALARM`, screen_off: off });
+      if (Math.round(h * 10) % 5 === 1) marks.push({ kind: "tmpwhitelist", t: at(h + 0.1), tag: "com.google.android.c2dm.intent.RECEIVE", screen_off: off });
+    }
+    spans.sort((a, b) => a.start - b.start);
+    return wait({ start, end, screen_off, spans, marks }, 500);
+  },
   wifiServices: () =>
     wait([
       { name: "adb-DEMO0000-AbCdEf", kind: "pairing" as const, addr: "192.168.0.10:37123" },

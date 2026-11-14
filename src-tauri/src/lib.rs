@@ -187,6 +187,11 @@ fn start_sampler(db: Arc<Mutex<Db>>) {
 }
 
 #[tauri::command]
+async fn app_timeline(serial: String, package: String) -> R<phone_deck_core::apptimeline::Timeline> {
+    blocking(move || c::app_timeline(&serial, &package).map_err(|e| e.to_string())).await?
+}
+
+#[tauri::command]
 async fn app_meta(state: tauri::State<'_, AppState>, serial: String, package: String) -> R<phone_deck_core::icons::Meta> {
     let (dir, lock) = (state.apps_dir.clone(), state.pull_lock.clone());
     blocking(move || c::app_meta(&serial, &package, &dir, &lock).map_err(|e| e.to_string())).await?
@@ -283,6 +288,7 @@ pub fn run() {
             apply_action,
             history,
             app_meta,
+            app_timeline,
             app_labels,
             wifi_services,
             wifi_pair,

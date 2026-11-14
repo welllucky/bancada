@@ -136,10 +136,29 @@ pub fn battery_stats(serial: &str, refresh: bool) -> Arc<BatteryStats> {
     })
 }
 
+static HISTORY: LazyLock<Cache<String>> = LazyLock::new(|| Cache::new(Duration::from_secs(120)));
+
+/// Texto de `batterystats --history` (grande; cache de 2 min, compartilhado pelo gráfico e pelas linhas do tempo).
+fn history_text(serial: &str) -> Arc<String> {
+    HISTORY.get_or(serial, false, || sh_long(serial, &["dumpsys", "batterystats", "--history"]))
+}
+
 pub fn battery_history(serial: &str) -> History {
     use chrono::Datelike;
-    let t = sh_long(serial, &["dumpsys", "batterystats", "--history"]);
-    parse_history(&t, chrono::Local::now().year())
+    parse_history(&history_text(serial), chrono::Local::now().year())
+}
+
+/// Quando o app esteve na tela, rodou em segundo plano e acordou o aparelho, desde a última carga.
+pub fn app_timeline(serial: &str, pkg: &str) -> Result<crate::apptimeline::Timeline> {
+    use chrono::Datelike;
+    adb::valid_pkg(pkg)?;
+    let map = uid_map(serial);
+    let uids: Vec<String> =
+        map.iter().filter(|(_, pkgs)| pkgs.iter().any(|p| p == pkg)).map(|(u, _)| crate::apptimeline::uid_token(*u)).collect();
+    if uids.is_empty() {
+        return Ok(Default::default());
+    }
+    Ok(crate::apptimeline::parse_app_timeline(&history_text(serial), &uids, chrono::Local::now().year()))
 }
 
 // ---- processes
