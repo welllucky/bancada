@@ -199,7 +199,7 @@ export default function App() {
             </button>
           ))}
           <div className="rail-foot">
-            <UpdateControl toast={toast} />
+            <UpdateControl />
             <LuckButton variant="ghost" size="sm" fullWidth iconLeft={theme === "dark" ? <Sun size={16} /> : <Moon size={16} />} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
               <span className="nav-label">Tema {theme === "dark" ? "claro" : "escuro"}</span>
             </LuckButton>

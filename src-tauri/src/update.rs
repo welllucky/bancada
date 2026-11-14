@@ -44,7 +44,15 @@ pub async fn update_check<R: Runtime>(app: AppHandle<R>) -> Result<Info, String>
     if !configured(&app) {
         return Ok(Info { current, available: None, notes: None, date: None, configured: false });
     }
-    let update = app.updater().map_err(|e| e.to_string())?.check().await.map_err(friendly)?;
+    let update = match app.updater().map_err(|e| e.to_string())?.check().await {
+        Ok(u) => u,
+        // Sem latest.json publicado (nenhuma release com atualizador ainda) ou sem pacote para esta
+        // plataforma: não é falha, só não há atualização.
+        Err(tauri_plugin_updater::Error::ReleaseNotFound)
+        | Err(tauri_plugin_updater::Error::TargetNotFound(_))
+        | Err(tauri_plugin_updater::Error::TargetsNotFound(_)) => None,
+        Err(e) => return Err(friendly(e)),
+    };
     let info = Info {
         current,
         available: update.as_ref().map(|u| u.version.clone()),
@@ -82,13 +90,23 @@ pub async fn update_install<R: Runtime>(app: AppHandle<R>) -> Result<(), String>
     app.restart();
 }
 
+/// Mensagem em pt-BR para a pessoa; o texto original vai só para o log.
 fn friendly(e: tauri_plugin_updater::Error) -> String {
+    use tauri_plugin_updater::Error as E;
     let s = e.to_string();
-    if s.contains("signature") || s.contains("Signature") {
-        format!("O pacote baixado não tem a assinatura esperada e não foi instalado. ({s})")
-    } else if s.contains("error sending request") || s.contains("dns") || s.contains("connect") {
-        "Sem conexão com o servidor de atualizações.".into()
-    } else {
-        s
+    eprintln!("atualização: {s}");
+    match e {
+        E::Minisign(_) | E::Base64(_) | E::SignatureUtf8(_) => {
+            "O pacote baixado não tem a assinatura esperada e não foi instalado.".into()
+        }
+        E::Reqwest(ref r) if r.is_timeout() => "O servidor de atualizações demorou demais para responder.".into(),
+        E::Reqwest(ref r) if r.is_connect() || r.is_request() => "Sem conexão com o servidor de atualizações.".into(),
+        E::Reqwest(_) | E::Network(_) => "A conexão caiu durante o download da atualização.".into(),
+        E::Serialization(_) | E::ReleaseNotFound => "O servidor de atualizações respondeu algo inesperado.".into(),
+        E::Io(_) => "Não foi possível gravar a atualização no disco.".into(),
+        _ if s.contains("signature") || s.contains("Signature") => {
+            "O pacote baixado não tem a assinatura esperada e não foi instalado.".into()
+        }
+        _ => "Não foi possível instalar a atualização.".into(),
     }
 }

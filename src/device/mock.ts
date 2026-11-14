@@ -367,7 +367,7 @@ export const mockAdapter: DeviceApi = {
       onProgress({ done, total });
       await new Promise((r) => setTimeout(r, 150));
     }
-    throw new Error("Demonstração: nada foi instalado.");
+    throw new Error("Demonstração: nada foi baixado.");
   },
   appTimeline: (_serial, pkg) => {
     // 8 h de demonstração: uso à noite, depois tela desligada com tarefas, alarmes e push acordando o app.
