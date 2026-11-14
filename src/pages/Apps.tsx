@@ -4,6 +4,7 @@ import { Action, api, AppEntry } from "../api";
 import { appLabel, installerLabel } from "../appNames";
 import { Bars } from "../charts";
 import { fmtNum } from "../format";
+import { fmtAgo, permLabel } from "../permissions";
 import { useDevice, useLoad } from "../hooks";
 import { DataTable, ErrorNote, Loading, LuckBadge, LuckButton, LuckCard, Segmented, Tone } from "../luck";
 import { KV, PageHead, Refresh } from "./common";
@@ -190,15 +191,31 @@ function AppDetailPage({ pkg }: { pkg: string }) {
           <div className="grid two">
             <LuckCard heading="Permissões sensíveis" index={String(d.granted_sensitive.length)} padded>
               {d.granted_sensitive.length ? (
-                <div className="row gap-xs wrap">
-                  {d.granted_sensitive.map((p) => <LuckBadge key={p} tone={SENSITIVE.has(p) ? "warning" : "neutral"}>{p}</LuckBadge>)}
-                </div>
+                <ul className="perm-list">
+                  {d.granted_sensitive.map((p) => (
+                    <li key={p}>
+                      <span className="perm-name">
+                        <b>{permLabel(p)}</b>
+                        <small className="mono">{p}</small>
+                      </span>
+                      {SENSITIVE.has(p) && <LuckBadge tone="warning">alto risco</LuckBadge>}
+                    </li>
+                  ))}
+                </ul>
               ) : <span className="muted">Nenhuma concedida.</span>}
               {d.recent_ops.length > 0 && (
                 <>
                   <span className="label">Uso recente</span>
-                  <ul className="ops">
-                    {d.recent_ops.map((o) => <li key={o.op}><code>{o.op}</code><span className="muted">há {o.ago}</span></li>)}
+                  <ul className="perm-list">
+                    {d.recent_ops.map((o) => (
+                      <li key={o.op}>
+                        <span className="perm-name">
+                          <b>{permLabel(o.op)}</b>
+                          <small className="mono">{o.op}</small>
+                        </span>
+                        <span className="muted small" title={o.ago}>{fmtAgo(o.ago)}</span>
+                      </li>
+                    ))}
                   </ul>
                 </>
               )}
