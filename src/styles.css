@@ -73,7 +73,6 @@ button { font: inherit; color: inherit; }
   background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); font-size: var(--text-micro); font-weight: 700;
 }
 .rail-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid var(--border); }
-.rail-note { padding: 0 8px; font-size: var(--text-caption); color: var(--fg-faint); }
 
 .main { min-width: 0; display: flex; flex-direction: column; }
 .topbar {
@@ -167,7 +166,7 @@ line.grid { stroke: var(--border); stroke-width: 1; }
 
 @media (max-width: 760px) {
   .shell { grid-template-columns: 64px minmax(0, 1fr); }
-  .brand-text, .nav-label, .rail-note, .nav-count { display: none; }
+  .brand-text, .nav-label, .nav-count { display: none; }
   .nav-item { justify-content: center; padding: 0; }
   .page, .connect { padding: 20px 16px; }
   .topbar { padding: 0 16px; }
