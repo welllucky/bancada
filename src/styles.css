@@ -233,3 +233,8 @@ line.grid { stroke: var(--border); stroke-width: 1; }
 .tl-tag { display: inline-block; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 @media (max-width: 760px) { .tl-lane { grid-template-columns: 92px minmax(0, 1fr); } .tl-tick:nth-child(even) { display: none; } }
 @media (max-width: 480px) { .tl-tick:nth-child(4n+3) { display: none; } }
+
+/* Notas da atualização (src/update.tsx). */
+.update-notes { display: flex; flex-direction: column; gap: 10px; max-height: 260px; overflow: auto; margin-bottom: 14px; }
+.update-notes ul { margin: 4px 0 0; padding-left: 18px; }
+.update-notes li { margin: 2px 0; }

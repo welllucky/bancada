@@ -1,6 +1,6 @@
 # AGENTS.md — Phone Deck
 
-App desktop nativo (Tauri 2: Rust + React/TS no WebView do SO) que inspeciona e controla um Android conectado por USB via `adb`. Alvos: Linux, macOS, Windows a partir do mesmo código. UI em pt-BR. Tudo local: sem telemetria, sem rede além do `adb`.
+App desktop nativo (Tauri 2: Rust + React/TS no WebView do SO) que inspeciona e controla um Android conectado por USB via `adb`. Alvos: Linux, macOS, Windows a partir do mesmo código. UI em pt-BR. Tudo local: sem telemetria, sem rede além do `adb`. Única exceção: procurar/baixar atualização do próprio app nas releases do GitHub (`src-tauri/src/update.rs`), ao abrir só se a pessoa deixar ligado e instalando só com confirmação.
 
 Visão de produto e instruções de uso para humanos: `README.md`. Este arquivo cobre o que o código não conta sozinho.
 
@@ -23,7 +23,7 @@ Fluxo: página → `api.x()` → comando Tauri → `spawn_blocking` → `collect
 2. **Escrita só pelo enum `Action`** (`actions.rs`). Cada variante valida seus argumentos (`SETTINGS_WHITELIST` de namespace/chave/valores, `BUCKETS`, regex de pacote em `adb::valid_pkg`) e gera tokens fixos. Toda execução é registrada na tabela `actions`.
 3. **Destrutivos proibidos:** `pm clear`, `rm`, `wipe`, factory reset, desinstalar app de sistema. `UninstallUserApp` só atua em app de terceiros com `--user 0`.
 4. A UI pede confirmação mostrando a descrição exata (`Action::describe`) antes de qualquer `Action`.
-5. `capabilities/default.json` concede só `core:default`; plugins Tauri (shell, fs, http) ficam fora.
+5. `capabilities/default.json` concede só `core:default`; plugins Tauri (shell, fs, http) ficam fora. O `tauri-plugin-updater` é registrado, mas a janela não ganha `updater:*`: só os comandos `update_check`/`update_install`/`app_version` (Rust) o usam, e o pacote é conferido com `plugins.updater.pubkey` antes de instalar.
 6. Fora do `adb shell`, o core só usa estes subcomandos do `adb`, todos com argumento validado: `pull` de APK (caminho vindo de `pm path`, `adb::valid_apk_path`) para extrair nome e ícone em `icons.rs` (só quando o app não está no catálogo local), apagando a cópia em seguida; `pair`/`connect`/`disconnect` com `IPv4:porta` e código de 6 dígitos (`wireless.rs`); `mdns services`; `tcpip 5555` (porta fixa, registrado no histórico de ações).
 
 Ao adicionar escrita nova: nova variante em `Action` + validação + teste de rejeição. Nunca alargue o whitelist para "qualquer valor".
@@ -70,4 +70,4 @@ Versões fixadas em `mise.toml` (o CI usa o mesmo arquivo via `jdx/mise-action`)
 
 - Commits Conventional Commits, autor/committer `Wellington Braga <wellingtonbat.wl@gmail.com>`, assinados por SSH. **Sem nenhuma menção a Claude/Codex/IA** em commits, trailers ou PRs (sem `Co-Authored-By` de agente). Confira: `git log -i --grep='claude\|codex'` vazio e `git log --format='%G?'` = `G`.
 - Remoto: `github.com/welllucky/phone-deck` (privado), branch `main`.
-- `.github/workflows/release.yml`: testes do core → build Linux/macOS (arm64 e x64)/Windows com `tauri-action`; dispara em tag `v*` ou manual. Toda action fixada por SHA com a versão em comentário; Dependabot propõe updates — atualize SHA e comentário juntos.
+- `.github/workflows/release.yml`: a cada push na `main`, `scripts/release-version.mjs` calcula a versão pelos Conventional Commits desde a última tag `v*` (`feat` → minor, `fix`/`perf` → patch, `!`/`BREAKING CHANGE` → major, minor enquanto 0.x; outros tipos não geram release). Havendo versão: testes do core → release em rascunho com as notas → build Linux/macOS (arm64 e x64)/Windows com `tauri-action` (versão gravada só na cópia de trabalho, **nenhum commit de bot**) → publica (a tag nasce aí). O `latest.json` do atualizador só sai com os secrets `TAURI_SIGNING_PRIVATE_KEY`/`_PASSWORD` (`--config src-tauri/tauri.updater.conf.json`). Manual (`workflow_dispatch`) sem versão nova só gera os instaladores como artefatos. Conferir localmente: `node scripts/release-version.mjs`. Toda action fixada por SHA com a versão em comentário; Dependabot propõe updates — atualize SHA e comentário juntos.

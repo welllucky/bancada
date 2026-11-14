@@ -38,7 +38,22 @@
       "icons/icon.ico"
     ],
     "linux": {
-      "deb": { "depends": ["android-tools-adb | adb"] }
+      "deb": {
+        "depends": [
+          "android-tools-adb | adb"
+        ]
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": [
+        "https://github.com/welllucky/phone-deck/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

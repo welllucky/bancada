@@ -7,6 +7,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::Manager;
 
+mod update;
+
 struct AppState {
     db: Arc<Mutex<Db>>,
     /// Cache dos ícones extraídos dos APKs.
@@ -259,6 +261,8 @@ async fn wifi_from_usb(state: tauri::State<'_, AppState>, serial: String) -> R<S
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(update::Pending::default())
         .setup(|app| {
             let dir = app.path().app_data_dir().expect("app data dir");
             let db = Db::open(&dir.join("history.db")).map_err(|e| e.to_string())?;
@@ -272,6 +276,9 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            update::update_check,
+            update::app_version,
+            update::update_install,
             list_devices,
             overview,
             battery_stats,

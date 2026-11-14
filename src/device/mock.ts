@@ -358,6 +358,17 @@ export const mockAdapter: DeviceApi = {
   // A demonstração não tem APKs: a UI mostra a inicial do nome.
   appMeta: () => wait({ label: null, icon: null }, 40),
   appLabels: () => wait({}, 10),
+  updateCheck: () =>
+    wait({ current: "0.1.0", available: "0.2.0", date: "2026-11-14", configured: true, notes: "### Novidades\n\n- Linha do tempo de uso na tela e em segundo plano (apps) — eb09ca2\n- Seção de rede no diagnóstico — 0b62490\n\n### Correções\n\n- Tela e diagnóstico refletem a ação aplicada — 73e5a4d\n" }, 400),
+  appVersion: () => wait("0.1.0", 10),
+  updateInstall: async (onProgress) => {
+    const total = 12 * 1024 * 1024;
+    for (let done = 0; done <= total; done += total / 10) {
+      onProgress({ done, total });
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    throw new Error("Demonstração: nada foi instalado.");
+  },
   appTimeline: (_serial, pkg) => {
     // 8 h de demonstração: uso à noite, depois tela desligada com tarefas, alarmes e push acordando o app.
     const end = Date.now();
