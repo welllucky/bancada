@@ -366,40 +366,79 @@ pub fn settings_snapshot(serial: &str) -> HashMap<String, Option<String>> {
     WATCHED.iter().map(|(ns, k)| (format!("{ns}.{k}"), setting(serial, ns, k))).collect()
 }
 
-/// Ícone real do app como `data:` URL, extraído do APK; `None` quando não há ícone que saibamos desenhar.
-///
-/// Copia o `base.apk` pelo `adb pull` só na primeira vez, extrai o ícone e apaga a cópia. O resultado fica em
-/// `cache_dir`, numa chave que muda quando o app é atualizado (o caminho do APK muda a cada instalação).
-pub fn app_icon(serial: &str, pkg: &str, cache_dir: &std::path::Path) -> Result<Option<String>> {
-    adb::valid_pkg(pkg)?;
-    let out = sh(serial, &["pm", "path", "--user", "0", pkg]);
-    let Some(remote) = out.lines().filter_map(|l| l.trim().strip_prefix("package:")).find(|p| p.ends_with("/base.apk")).or_else(|| {
-        out.lines().filter_map(|l| l.trim().strip_prefix("package:")).next()
-    }) else {
-        return Ok(None);
-    };
-    adb::valid_apk_path(remote)?;
-    std::fs::create_dir_all(cache_dir).map_err(|e| adb::AdbError(e.to_string()))?;
-    let key = format!("{pkg}.{:016x}", fnv1a(remote.as_bytes()));
-    let cached = cache_dir.join(format!("{key}.icon"));
-    if let Ok(v) = std::fs::read_to_string(&cached) {
-        return Ok((!v.is_empty()).then_some(v));
+// ---- catálogo local dos apps (nome e ícone extraídos do APK uma vez só)
+
+static APK_PATHS: LazyLock<Cache<HashMap<String, String>>> = LazyLock::new(|| Cache::new(Duration::from_secs(120)));
+
+/// `pm list packages -f`: `package:/data/app/~~x==/com.foo-y==/base.apk=com.foo` → pacote → caminho do APK.
+pub fn parse_apk_paths(out: &str) -> HashMap<String, String> {
+    out.lines()
+        .filter_map(|l| {
+            let (path, pkg) = l.trim().strip_prefix("package:")?.rsplit_once('=')?;
+            Some((pkg.to_string(), path.to_string()))
+        })
+        .collect()
+}
+
+/// Caminho do APK de cada app numa única chamada ao aparelho (cache de 2 min), para validar o catálogo
+/// inteiro sem um `pm path` por app.
+fn apk_path(serial: &str, pkg: &str) -> Option<String> {
+    let map = APK_PATHS.get_or(serial, false, || parse_apk_paths(&sh(serial, &["pm", "list", "packages", "-f", "--user", "0"])));
+    if let Some(p) = map.get(pkg) {
+        return Some(p.clone());
     }
-    // Versões antigas do mesmo app saem do cache.
-    if let Ok(rd) = std::fs::read_dir(cache_dir) {
+    // App instalado depois da última leitura: pergunta só por ele.
+    let out = sh(serial, &["pm", "path", "--user", "0", pkg]);
+    let paths: Vec<&str> = out.lines().filter_map(|l| l.trim().strip_prefix("package:")).collect();
+    paths.iter().find(|p| p.ends_with("/base.apk")).or(paths.first()).map(|p| p.to_string())
+}
+
+const LABELS_FILE: &str = "labels.json";
+
+/// Nome e ícone do app. Vêm do catálogo em disco (`dir`) enquanto o APK for o mesmo; quando o app é
+/// instalado ou atualizado, o APK é copiado uma vez, lido e apagado. `pull` serializa as cópias.
+pub fn app_meta(serial: &str, pkg: &str, dir: &std::path::Path, pull: &Mutex<()>) -> Result<crate::icons::Meta> {
+    adb::valid_pkg(pkg)?;
+    let Some(remote) = apk_path(serial, pkg) else { return Ok(Default::default()) };
+    adb::valid_apk_path(&remote)?;
+    let io = |e: std::io::Error| adb::AdbError(e.to_string());
+    std::fs::create_dir_all(dir).map_err(io)?;
+    // A chave muda quando o caminho do APK muda, ou seja, a cada instalação ou atualização.
+    let key = format!("{pkg}.{:016x}", fnv1a(remote.as_bytes()));
+    let file = dir.join(format!("{key}.json"));
+    let read = || std::fs::read(&file).ok().and_then(|b| serde_json::from_slice::<crate::icons::Meta>(&b).ok());
+    if let Some(m) = read() {
+        return Ok(m);
+    }
+    let _g = pull.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(m) = read() {
+        return Ok(m); // outra chamada extraiu enquanto esperávamos
+    }
+    let tmp = dir.join(format!("{key}.apk.part"));
+    let res = adb::pull_apk(serial, &remote, &tmp, Duration::from_secs(300)).map(|_| crate::icons::inspect(&tmp));
+    let _ = std::fs::remove_file(&tmp);
+    let meta = res?;
+    // Versões antigas do mesmo app saem do catálogo.
+    if let Ok(rd) = std::fs::read_dir(dir) {
         for e in rd.flatten() {
             let n = e.file_name().to_string_lossy().to_string();
-            if n.starts_with(&format!("{pkg}.")) && n.ends_with(".icon") {
+            if n.starts_with(&format!("{pkg}.")) && (n.ends_with(".json") || n.ends_with(".icon")) {
                 let _ = std::fs::remove_file(e.path());
             }
         }
     }
-    let tmp = cache_dir.join(format!("{key}.apk.part"));
-    let res = adb::pull_apk(serial, remote, &tmp, Duration::from_secs(300)).map(|_| crate::icons::extract(&tmp));
-    let _ = std::fs::remove_file(&tmp);
-    let icon = res?;
-    let _ = std::fs::write(&cached, icon.as_deref().unwrap_or(""));
-    Ok(icon)
+    let _ = std::fs::write(&file, serde_json::to_vec(&meta).unwrap_or_default());
+    if let Some(label) = &meta.label {
+        let mut labels = app_labels(dir);
+        labels.insert(pkg.to_string(), label.clone());
+        let _ = std::fs::write(dir.join(LABELS_FILE), serde_json::to_vec(&labels).unwrap_or_default());
+    }
+    Ok(meta)
+}
+
+/// Nomes já conhecidos no catálogo, para a UI mostrar o nome real desde a abertura sem tocar no aparelho.
+pub fn app_labels(dir: &std::path::Path) -> HashMap<String, String> {
+    std::fs::read(dir.join(LABELS_FILE)).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default()
 }
 
 /// Hash estável entre versões do Rust (o `DefaultHasher` não garante isso), para nomes de cache.
@@ -456,4 +495,28 @@ pub fn net_connections(serial: &str) -> Value {
 pub fn net_live(serial: &str) -> Value {
     let ifaces = crate::netusage::parse_proc_net_dev(&sh(serial, &["cat", "/proc/net/dev"]));
     json!({"t": (now_s() * 1000.0) as i64, "ifaces": ifaces})
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn apk_paths() {
+        let out = "package:/data/app/~~AbC==/com.whatsapp-XyZ==/base.apk=com.whatsapp\npackage:/system/app/Foo/Foo.apk=com.foo.bar\nlixo\n";
+        let m = parse_apk_paths(out);
+        assert_eq!(m.len(), 2);
+        assert_eq!(m["com.whatsapp"], "/data/app/~~AbC==/com.whatsapp-XyZ==/base.apk");
+        assert_eq!(m["com.foo.bar"], "/system/app/Foo/Foo.apk");
+    }
+
+    #[test]
+    fn labels_roundtrip() {
+        let dir = std::env::temp_dir().join(format!("pd-labels-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(app_labels(&dir).is_empty());
+        std::fs::write(dir.join(LABELS_FILE), r#"{"com.whatsapp":"WhatsApp"}"#).unwrap();
+        assert_eq!(app_labels(&dir).get("com.whatsapp").map(String::as_str), Some("WhatsApp"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

@@ -1,4 +1,5 @@
 import type {
+  AppMeta,
   Action, AppDetail, AppEntry, BatteryHistory, BatteryStats, BluetoothInfo, BootInfo, Device, HistoryData, Network,
   Overview, Processes, Recommendation, SecurityInfo, WifiService, NetConnections, NetLive, NetUsage,
 } from "./types";
@@ -29,7 +30,10 @@ export interface DeviceApi {
   netConnections(serial: string): Promise<NetConnections>;
   netLive(serial: string): Promise<NetLive>;
   /** Ícone real do app (`data:` URL) extraído do APK, ou nulo. */
-  appIcon(serial: string, pkg: string): Promise<string | null>;
+  /** Nome e ícone do app, do catálogo local; o APK só é copiado do aparelho quando o app muda. */
+  appMeta(serial: string, pkg: string): Promise<AppMeta>;
+  /** Nomes já guardados no catálogo local, sem tocar no aparelho. */
+  appLabels(): Promise<Record<string, string>>;
   wifiServices(): Promise<WifiService[]>;
   wifiPair(addr: string, code: string): Promise<string>;
   wifiConnect(addr: string): Promise<string>;

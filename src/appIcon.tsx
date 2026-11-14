@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
-import { appLabel } from "./appNames";
+import { appLabel, learnLabels } from "./appNames";
 import { useDevice } from "./hooks";
 
 /**
  * Logo real do app, extraída do APK no aparelho (ver `icons.rs`). Enquanto não chega, ou quando o app não tem
  * ícone que saibamos desenhar, mostra a inicial do nome.
  *
- * Cada ícone custa uma cópia do APK na primeira vez (depois fica em cache no disco), então só pedimos os que
- * aparecem na tela, um de cada vez, e cancelamos os que saíram da tela antes da vez deles.
+ * Nome e ícone ficam no catálogo local em disco e só são extraídos de novo quando o app é atualizado. A primeira
+ * extração custa uma cópia do APK, então só pedimos os que aparecem na tela, um de cada vez, e cancelamos os
+ * que saíram da tela antes da vez deles. O nome real aproveita a mesma leitura.
  */
 
 const known = new Map<string, string | null>();
@@ -45,7 +46,9 @@ function request(serial: string, pkg: string, cb: (v: string | null) => void): (
       run: async () => {
         let v: string | null = null;
         try {
-          v = await api.appIcon(serial, pkg);
+          const m = await api.appMeta(serial, pkg);
+          v = m.icon;
+          if (m.label) learnLabels({ [pkg]: m.label });
         } finally {
           known.set(key, v);
           waiters.get(key)?.forEach((f) => f(v));

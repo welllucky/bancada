@@ -338,7 +338,8 @@ export const mockAdapter: DeviceApi = {
     });
   },
   // A demonstração não tem APKs: a UI mostra a inicial do nome.
-  appIcon: () => wait(null, 40),
+  appMeta: () => wait({ label: null, icon: null }, 40),
+  appLabels: () => wait({}, 10),
   wifiServices: () =>
     wait([
       { name: "adb-DEMO0000-AbCdEf", kind: "pairing" as const, addr: "192.168.0.10:37123" },

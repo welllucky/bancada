@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, History, House, LayoutGrid, Moon, Smartphone, Sun, Usb, Wifi } from "lucide-react";
 import { api, Action, Device, isTauri, Recommendation } from "./api";
+import { learnLabels, onLabels } from "./appNames";
 import { command, reversal } from "./actions";
 import { Area, Ctx, Route, useAnyStale, useLocal } from "./hooks";
 import { LuckBadge, LuckButton, LuckCard, LuckDialog, Step, Steps } from "./luck";
@@ -50,6 +51,14 @@ export default function App() {
   const [problemCount, setProblemCount] = useState<number | null>(null);
   const tid = useRef(0);
   const refreshing = useAnyStale();
+  const [labelsRev, setLabelsRev] = useState(0);
+
+  // Nomes reais dos apps já guardados no catálogo local aparecem desde a abertura.
+  useEffect(() => {
+    const off = onLabels(() => setLabelsRev((n) => n + 1));
+    api.appLabels().then(learnLabels).catch(() => {});
+    return off;
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -128,7 +137,7 @@ export default function App() {
   const rev = confirm ? reversal(confirm.action) : null;
 
   return (
-    <Ctx.Provider value={{ serial, route, go, openApp, toast, confirmAction }}>
+    <Ctx.Provider value={{ serial, route, go, openApp, toast, confirmAction, labelsRev }}>
       <div className="shell">
         <nav className="rail" aria-label="Navegação principal">
           <div className="brand">
