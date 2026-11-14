@@ -55,6 +55,8 @@ Versões fixadas em `mise.toml` (o CI usa o mesmo arquivo via `jdx/mise-action`)
 
 **Nova regra do otimizador.** Em `optimizer::recommend`: `id` estável em kebab-case, severidade, título/detalhe em pt-BR, `evidence` com o número que disparou e, se houver correção, uma `Action` existente. Pronto quando: teste unitário com entrada que dispara e outra que não dispara.
 
+**Nova marca.** Em `vendor.rs`: detecte em `Profile::from_props` (`ro.product.manufacturer`), declare em `Vendor::capabilities` só o que a marca realmente expõe e, se houver, a skin. Regra que depende de campo/configuração fora do AOSP checa `profile.has(Capability::…)`; sem a capacidade, a regra some em vez de sugerir algo que não existe no aparelho. Pronto quando: fixture da marca (real ou em `fixtures/synthetic/`) e teste de que ela não recebe conselho de outra marca.
+
 **Fixtures** (`src-tauri/core/tests/fixtures/`): capture com `adb shell dumpsys … > arquivo` e **anonimize antes do commit** — SSID, BSSID/MAC, IPs (IPv4 privados e IPv6 públicos → `2001:db8:`), serial do aparelho, IMEI, nomes, e-mails, telefones, IDs de contato. Confirme com `grep` antes de commitar; o histórico já precisou ser reescrito uma vez por IPv6 vazado.
 
 ## Verificação antes de concluir
