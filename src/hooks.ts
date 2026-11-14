@@ -18,6 +18,8 @@ export interface DeviceCtx {
   openApp: (pkg: string) => void;
   toast: (msg: string, kind?: "ok" | "err") => void;
   confirmAction: (opts: { title: string; body: string; action: Action; danger?: boolean }) => Promise<boolean>;
+  /** Muda quando chegam nomes reais de apps, para quem mostra nomes redesenhar. */
+  labelsRev?: number;
 }
 
 export const Ctx = createContext<DeviceCtx>({

@@ -50,13 +50,37 @@ const shorten = (p: string) => {
   return parts.length > 2 ? parts.slice(-2).join(".") : p;
 };
 
-/** Nome para mostrar: dicionário, senão o pacote encurtado. Aceita nome de processo (`pkg:servico`). */
-export function appLabel(pkgOrProc: string): string {
-  const pkg = pkgOrProc.split(/\s+/)[0].split(":")[0];
-  return NAMES[pkg] ?? shorten(pkg);
+/**
+ * Nomes reais lidos do APK (catálogo local, ver `collectors::app_meta`). Chegam aos poucos, conforme os
+ * ícones são extraídos; quem desenha nomes é avisado para redesenhar.
+ */
+const LEARNED = new Map<string, string>();
+const listeners = new Set<() => void>();
+let pending: ReturnType<typeof setTimeout> | undefined;
+
+export function learnLabels(m: Record<string, string>) {
+  let changed = false;
+  for (const [pkg, label] of Object.entries(m)) {
+    if (label && LEARNED.get(pkg) !== label) {
+      LEARNED.set(pkg, label);
+      changed = true;
+    }
+  }
+  if (changed && !pending) pending = setTimeout(() => { pending = undefined; listeners.forEach((f) => f()); }, 300);
 }
 
-export const hasFriendlyName = (pkg: string) => pkg in NAMES;
+export function onLabels(f: () => void) {
+  listeners.add(f);
+  return () => { listeners.delete(f); };
+}
+
+/** Nome para mostrar: o do celular, senão o dicionário, senão o pacote encurtado. Aceita nome de processo (`pkg:servico`). */
+export function appLabel(pkgOrProc: string): string {
+  const pkg = pkgOrProc.split(/\s+/)[0].split(":")[0];
+  return LEARNED.get(pkg) ?? NAMES[pkg] ?? shorten(pkg);
+}
+
+export const hasFriendlyName = (pkg: string) => LEARNED.has(pkg) || pkg in NAMES;
 
 const INSTALLERS: Record<string, string> = {
   "com.android.vending": "Play Store",

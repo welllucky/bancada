@@ -261,3 +261,6 @@ export interface NetConnections { readable: boolean; sockets: NetSocket[] }
 export interface NetIface { name: string; transport: "wifi" | "mobile" | "other"; rx: number; tx: number }
 /** Contadores acumulados das interfaces num instante (ms). */
 export interface NetLive { t: number; ifaces: NetIface[] }
+
+/** Nome e ícone (`data:` URL) lidos do APK. */
+export interface AppMeta { label: string | null; icon: string | null }

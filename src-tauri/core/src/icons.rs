@@ -18,18 +18,51 @@ const ANYDPI: u16 = 0xFFFE;
 /// Teto do resultado: ícones maiores que isso viram a inicial do nome na UI.
 const MAX_BYTES: usize = 600 * 1024;
 
+/// O que o catálogo local guarda de cada app: nome como aparece no celular e ícone.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct Meta {
+    pub label: Option<String>,
+    pub icon: Option<String>,
+}
+
 /// Extrai o ícone de um APK local. `None` quando o app não tem ícone que saibamos desenhar.
 pub fn extract(apk_path: &Path) -> Option<String> {
-    let apk = Apk::new(apk_path).ok()?;
-    let (manifest, _) = apk.read("AndroidManifest.xml").ok()?;
-    let ax = AXML::new(&mut &manifest[..], None).ok()?;
-    let app = ax.root.childrens().find(|e| e.name() == "application")?;
-    let (arsc_bytes, _) = apk.read("resources.arsc").ok()?;
-    let arsc = ARSC::new(&mut &arsc_bytes[..]).ok()?;
+    inspect(apk_path).icon
+}
+
+/// Nome (em pt-BR quando o app traduz) e ícone, lidos numa única passada pelo APK.
+pub fn inspect(apk_path: &Path) -> Meta {
+    let Ok(apk) = Apk::new(apk_path) else { return Meta::default() };
+    let Some(ax) = apk.read("AndroidManifest.xml").ok().and_then(|(m, _)| AXML::new(&mut &m[..], None).ok()) else { return Meta::default() };
+    let Some(app) = ax.root.childrens().find(|e| e.name() == "application") else { return Meta::default() };
+    let arsc = apk.read("resources.arsc").ok().and_then(|(b, _)| ARSC::new(&mut &b[..]).ok());
+    let Some(arsc) = arsc else {
+        // Sem tabela de recursos só dá para aproveitar um rótulo literal.
+        return Meta { label: app.attr("label").filter(|l| !l.starts_with('@')).map(clean_label), icon: None };
+    };
     let r = Res { apk: &apk, arsc: &arsc };
-    let id = ref_id(app.attr("icon")?)?;
-    let url = r.icon(id)?;
-    (url.len() <= MAX_BYTES).then_some(url)
+    let icon = app.attr("icon").and_then(ref_id).and_then(|id| r.icon(id)).filter(|u| u.len() <= MAX_BYTES);
+    let label = app.attr("label").and_then(|v| match ref_id(v) {
+        Some(id) => r.label(id, 0),
+        None if v.starts_with('@') => None,
+        None => Some(clean_label(v)),
+    });
+    Meta { label, icon }
+}
+
+fn clean_label(s: &str) -> String {
+    s.split_whitespace().collect::<Vec<_>>().join(" ").chars().take(80).collect()
+}
+
+/// Preferência de idioma para o nome: pt-BR, depois pt, depois o padrão do app (sem idioma).
+fn locale_score(locale: u32) -> Option<u8> {
+    let b = locale.to_le_bytes();
+    match (&b[0..2], &b[2..4]) {
+        (b"pt", b"BR") => Some(3),
+        (b"pt", [0, 0]) => Some(2),
+        ([0, 0], _) => Some(1),
+        _ => None,
+    }
 }
 
 /// `@7f0f0000` → 0x7f0f0000.
@@ -106,6 +139,39 @@ impl Res<'_> {
             }
         }
         out
+    }
+
+    /// Texto de um recurso de string, na melhor tradução disponível.
+    fn label(&self, id: u32, depth: u8) -> Option<String> {
+        if depth > MAX_DEPTH {
+            return None;
+        }
+        let (pk, ty, en) = ((id >> 24) as u8, ((id >> 16) & 0xff) as u8, (id & 0xffff) as u16);
+        let mut best: Option<(u8, String)> = None;
+        for pkg in self.arsc.packages() {
+            if pkg.header.id as u8 != pk {
+                continue;
+            }
+            for (cfg, types) in &pkg.resources {
+                let Some(score) = locale_score(cfg.locale) else { continue };
+                if best.as_ref().is_some_and(|(b, _)| *b >= score) {
+                    continue;
+                }
+                let Some(ResTableEntry::Default(d)) = types.get(&ty).and_then(|t| t.find(en)) else { continue };
+                let text = match d.value.data_type {
+                    ResourceValueType::String => self.arsc.value_to_string(&d.value),
+                    ResourceValueType::Reference | ResourceValueType::DynamicReference if d.value.data != id => {
+                        match self.label(d.value.data, depth + 1) { Some(t) => t, None => continue }
+                    }
+                    _ => continue,
+                };
+                let text = clean_label(&text);
+                if !text.is_empty() {
+                    best = Some((score, text));
+                }
+            }
+        }
+        best.map(|(_, t)| t)
     }
 
     /// Ícone do app como `data:` URL: adaptativo/vetor quando houver, senão o bitmap mais nítido.
@@ -521,6 +587,16 @@ fn b64(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn label_locale_preference() {
+        let loc = |l: &[u8; 2], r: &[u8; 2]| u32::from_le_bytes([l[0], l[1], r[0], r[1]]);
+        assert_eq!(locale_score(loc(b"pt", b"BR")), Some(3));
+        assert_eq!(locale_score(loc(b"pt", &[0, 0])), Some(2));
+        assert_eq!(locale_score(0), Some(1));
+        assert_eq!(locale_score(loc(b"en", b"US")), None);
+        assert_eq!(clean_label("  Meu\n  App "), "Meu App");
+    }
 
     #[test]
     fn colors() {

@@ -10,9 +10,9 @@ use tauri::Manager;
 struct AppState {
     db: Arc<Mutex<Db>>,
     /// Cache dos ícones extraídos dos APKs.
-    icons_dir: std::path::PathBuf,
+    apps_dir: std::path::PathBuf,
     /// Uma cópia de APK por vez: evita saturar o cabo e baixar o mesmo APK duas vezes.
-    icon_lock: Arc<Mutex<()>>,
+    pull_lock: Arc<Mutex<()>>,
 }
 
 type R<T> = Result<T, String>;
@@ -183,13 +183,15 @@ fn start_sampler(db: Arc<Mutex<Db>>) {
 }
 
 #[tauri::command]
-async fn app_icon(state: tauri::State<'_, AppState>, serial: String, package: String) -> R<Option<String>> {
-    let (dir, lock) = (state.icons_dir.clone(), state.icon_lock.clone());
-    blocking(move || {
-        let _g = lock.lock().unwrap_or_else(|e| e.into_inner());
-        c::app_icon(&serial, &package, &dir).map_err(|e| e.to_string())
-    })
-    .await?
+async fn app_meta(state: tauri::State<'_, AppState>, serial: String, package: String) -> R<phone_deck_core::icons::Meta> {
+    let (dir, lock) = (state.apps_dir.clone(), state.pull_lock.clone());
+    blocking(move || c::app_meta(&serial, &package, &dir, &lock).map_err(|e| e.to_string())).await?
+}
+
+#[tauri::command]
+async fn app_labels(state: tauri::State<'_, AppState>) -> R<std::collections::HashMap<String, String>> {
+    let dir = state.apps_dir.clone();
+    blocking(move || Ok(c::app_labels(&dir))).await?
 }
 
 #[tauri::command]
@@ -253,8 +255,11 @@ pub fn run() {
             let db = Db::open(&dir.join("history.db")).map_err(|e| e.to_string())?;
             let db = Arc::new(Mutex::new(db));
             start_sampler(db.clone());
-            let icons_dir = app.path().app_cache_dir().unwrap_or_else(|_| dir.clone()).join("icons");
-            app.manage(AppState { db, icons_dir, icon_lock: Arc::new(Mutex::new(())) });
+            let cache = app.path().app_cache_dir().unwrap_or_else(|_| dir.clone());
+            // Cache antigo, só de ícones: o catálogo em `apps/` o substitui.
+            let _ = std::fs::remove_dir_all(cache.join("icons"));
+            let apps_dir = cache.join("apps");
+            app.manage(AppState { db, apps_dir, pull_lock: Arc::new(Mutex::new(())) });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -273,7 +278,8 @@ pub fn run() {
             optimizations,
             apply_action,
             history,
-            app_icon,
+            app_meta,
+            app_labels,
             wifi_services,
             wifi_pair,
             wifi_connect,
