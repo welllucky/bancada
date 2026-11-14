@@ -1,6 +1,6 @@
 [package]
 name = "phone-deck-core"
-version = "0.3.0"
+version = "0.4.1"
 edition = "2021"
 description = "ADB collectors, parsers, optimizer and history for Phone Deck"
 license = "MIT"

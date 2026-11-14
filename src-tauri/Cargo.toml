@@ -4,7 +4,7 @@ resolver = "2"
 
 [package]
 name = "phone-deck"
-version = "0.3.0"
+version = "0.4.1"
 description = "Bancada — painel nativo para inspecionar e controlar celulares Android via USB"
 edition = "2021"
 license = "MIT"
