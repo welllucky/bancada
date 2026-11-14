@@ -39,12 +39,9 @@ if (set > 0) {
 
 const git = (...a) => execFileSync("git", a, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
 
-let last = "";
-try {
-  last = git("describe", "--tags", "--abbrev=0", "--match", "v[0-9]*");
-} catch {
-  /* primeira release */
-}
+// Maior tag de versão, mesmo que não seja ancestral do HEAD (histórico reescrito): os commits contados são
+// os que ela ainda não contém.
+const last = git("tag", "--list", "v[0-9]*.[0-9]*.[0-9]*", "--sort=-v:refname").split("\n")[0] ?? "";
 const base = last ? last.slice(1) : "0.0.0";
 const range = last ? [`${last}..HEAD`] : ["HEAD"];
 const raw = git("log", ...range, "--no-merges", "--format=%H%x1f%s%x1f%b%x1e");
