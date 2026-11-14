@@ -5,3 +5,4 @@ src-tauri/gen/schemas/
 *.db
 .DS_Store
 tsconfig.tsbuildinfo
+release-notes.md
