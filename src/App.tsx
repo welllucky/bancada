@@ -210,7 +210,7 @@ export default function App() {
         )}
       </LuckDialog>
 
-      <LuckDialog open={wifiOpen} heading="Conectar por Wi-Fi" description="Use o Phone Deck sem o cabo, com o celular e o computador na mesma rede." onClose={() => setWifiOpen(false)}>
+      <LuckDialog open={wifiOpen} heading="Conectar por Wi-Fi" description="Celular e computador na mesma rede." onClose={() => setWifiOpen(false)}>
         {wifiOpen && <WifiPanel devices={devices} usbSerial={current?.transport === "usb" ? current.serial : null} toast={toast} />}
         <div className="row end"><LuckButton variant="ghost" onClick={() => setWifiOpen(false)}>Fechar</LuckButton></div>
       </LuckDialog>
@@ -267,7 +267,7 @@ function ConnectScreen({ polled, adbError, found, pending, children }: { polled:
         </Steps>
       </LuckCard>
       {children && (
-        <LuckCard heading="Sem cabo" hint="Android 11 ou mais novo" padded style={{ width: "min(560px, 100%)" }}>
+        <LuckCard heading="Sem cabo" padded style={{ width: "min(560px, 100%)" }}>
           {children}
         </LuckCard>
       )}
