@@ -61,8 +61,8 @@ export function WifiPanel({ devices, usbSerial, toast }: { devices: Device[]; us
     <div className="wifi">
       {usbSerial && (
         <section>
-          <h3>Pelo cabo, em um passo</h3>
-          <p className="muted small">Com o celular no cabo e no mesmo Wi-Fi deste computador, o Phone Deck liga a depuração por Wi-Fi e conecta. Depois você pode tirar o cabo. Vale até o celular reiniciar.</p>
+          <h3>Pelo cabo</h3>
+          <p className="muted small">Liga o Wi-Fi e conecta. Depois é só tirar o cabo.</p>
           <div>
             <LuckButton variant="primary" iconLeft={<Wifi size={16} />} loading={busy === "usb"} disabled={!!busy} onClick={() => run("usb", () => api.wifiFromUsb(usbSerial))}>
               Usar sem cabo
@@ -73,16 +73,12 @@ export function WifiPanel({ devices, usbSerial, toast }: { devices: Device[]; us
 
       <section>
         <h3>Parear com código</h3>
-        <ol className="muted small steps-help">
-          <li>No celular: Opções do desenvolvedor › <b>Depuração por Wi-Fi</b> › ative.</li>
-          <li>Toque em <b>Parear dispositivo com código de pareamento</b>.</li>
-          <li>Preencha o endereço (IP e porta) e o código de 6 dígitos que aparecem.</li>
-        </ol>
+        <p className="muted small">No celular: Depuração por Wi-Fi › <b>Parear com código</b>.</p>
         {pairing.length > 0 && (
           <div className="row gap-xs wrap">
             {pairing.map((s) => (
               <button key={s.addr} type="button" className="chip" onClick={() => setPairAddr(s.addr)} aria-pressed={pairAddr === s.addr}>
-                {s.addr} <small className="muted">pronto para parear</small>
+                {s.addr}
               </button>
             ))}
           </div>
@@ -95,7 +91,7 @@ export function WifiPanel({ devices, usbSerial, toast }: { devices: Device[]; us
       </section>
 
       <section>
-        <h3>Conectar a um aparelho já pareado</h3>
+        <h3>Já pareado</h3>
         {connectable.length > 0 && (
           <ul className="pkg-list">
             {connectable.map((s) => (
@@ -114,7 +110,7 @@ export function WifiPanel({ devices, usbSerial, toast }: { devices: Device[]; us
 
       {wifiDevices.length > 0 && (
         <section>
-          <h3>Conectados por Wi-Fi</h3>
+          <h3>Conectados</h3>
           <ul className="pkg-list">
             {wifiDevices.map((d) => (
               <li key={d.serial} className="row between gap-sm">
@@ -127,7 +123,6 @@ export function WifiPanel({ devices, usbSerial, toast }: { devices: Device[]; us
           </ul>
         </section>
       )}
-      <p className="muted small">Com a depuração por Wi-Fi ligada, um computador autorizado na mesma rede controla o celular. Desligue quando terminar.</p>
     </div>
   );
 }
