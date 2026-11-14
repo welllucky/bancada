@@ -1,35 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Activity, AppWindow, BatteryCharging, Bluetooth, Cpu, History, LayoutDashboard, Moon, Power, ShieldCheck, Smartphone, Sparkles, Sun, Usb, Wifi,
-} from "lucide-react";
-import { api, Action, Device, isTauri } from "./api";
-import { Ctx } from "./hooks";
-import { useLocal } from "./hooks";
-import OverviewPage from "./pages/Overview";
-import BatteryPage from "./pages/Battery";
-import ProcessesPage from "./pages/Processes";
+import { Activity, History, House, LayoutGrid, Moon, Smartphone, Sun, Usb } from "lucide-react";
+import { api, Action, Device, isTauri, Recommendation } from "./api";
+import { command, reversal } from "./actions";
+import { Area, Ctx, Route, useLocal } from "./hooks";
+import { LuckBadge, LuckButton, LuckCard, LuckDialog, Step, Steps } from "./luck";
+import { problems } from "./recs";
+import InicioPage from "./pages/Inicio";
+import DiagnosticoPage from "./pages/Diagnostico";
 import AppsPage from "./pages/Apps";
-import NetworkPage from "./pages/Network";
-import BluetoothPage from "./pages/Bluetooth";
-import BootPage from "./pages/Boot";
-import SecurityPage from "./pages/Security";
-import OptimizePage from "./pages/Optimize";
-import HistoryPage from "./pages/History";
+import AparelhoPage from "./pages/Aparelho";
+import HistoricoPage from "./pages/Historico";
 
-const NAV = [
-  { id: "overview", label: "Visão geral", icon: LayoutDashboard, el: OverviewPage },
-  { id: "optimize", label: "Otimizações", icon: Sparkles, el: OptimizePage },
-  { id: "battery", label: "Bateria", icon: BatteryCharging, el: BatteryPage },
-  { id: "processes", label: "Processos", icon: Cpu, el: ProcessesPage },
-  { id: "apps", label: "Apps", icon: AppWindow, el: AppsPage },
-  { id: "network", label: "Rede", icon: Wifi, el: NetworkPage },
-  { id: "bluetooth", label: "Bluetooth", icon: Bluetooth, el: BluetoothPage },
-  { id: "boot", label: "Boot & Sistema", icon: Power, el: BootPage },
-  { id: "security", label: "Segurança", icon: ShieldCheck, el: SecurityPage },
-  { id: "history", label: "Histórico", icon: History, el: HistoryPage },
-] as const;
+const NAV: { id: Area; label: string; icon: typeof House }[] = [
+  { id: "inicio", label: "Início", icon: House },
+  { id: "diagnostico", label: "Diagnóstico", icon: Activity },
+  { id: "apps", label: "Apps", icon: LayoutGrid },
+  { id: "aparelho", label: "Aparelho", icon: Smartphone },
+  { id: "historico", label: "Histórico", icon: History },
+];
 
-type PageId = (typeof NAV)[number]["id"];
+const PAGES: Record<Area, () => JSX.Element> = {
+  inicio: InicioPage,
+  diagnostico: DiagnosticoPage,
+  apps: AppsPage,
+  aparelho: AparelhoPage,
+  historico: HistoricoPage,
+};
 
 interface ConfirmReq {
   title: string;
@@ -41,13 +37,15 @@ interface ConfirmReq {
 
 export default function App() {
   const [theme, setTheme] = useLocal<"dark" | "light">("pd.theme", "dark");
-  const [page, setPage] = useLocal<PageId>("pd.page", "overview");
+  const [route, setRoute] = useLocal<Route>("pd.route", { area: "inicio" });
   const [preferred, setPreferred] = useLocal<string | null>("pd.serial", null);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [polled, setPolled] = useState(false);
   const [adbError, setAdbError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<{ id: number; msg: string; kind: "ok" | "err" }[]>([]);
   const [confirm, setConfirm] = useState<ConfirmReq | null>(null);
   const [busy, setBusy] = useState(false);
+  const [problemCount, setProblemCount] = useState<number | null>(null);
   const tid = useRef(0);
 
   useEffect(() => {
@@ -55,10 +53,6 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
-    if (!isTauri()) {
-      setAdbError("Abra pelo aplicativo Phone Deck (pnpm tauri dev) — o navegador não tem acesso ao ADB.");
-      return;
-    }
     let alive = true;
     const poll = async () => {
       try {
@@ -68,6 +62,8 @@ export default function App() {
         setAdbError(r.ok ? null : r.error ?? "erro no adb");
       } catch (e) {
         if (alive) setAdbError(String(e));
+      } finally {
+        if (alive) setPolled(true);
       }
     };
     poll();
@@ -83,6 +79,13 @@ export default function App() {
   const serial = current?.serial ?? null;
   const pending = devices.find((d) => d.state === "unauthorized");
 
+  // Contagem de problemas para o selo da navegação; o otimizador é caro, então só ao trocar de aparelho.
+  useEffect(() => {
+    setProblemCount(null);
+    if (!serial) return;
+    api.optimizations(serial).then((rs: Recommendation[]) => setProblemCount(problems(rs).length)).catch(() => {});
+  }, [serial]);
+
   const toast = useCallback((msg: string, kind: "ok" | "err" = "ok") => {
     const id = ++tid.current;
     setToasts((t) => [...t, { id, msg, kind }]);
@@ -90,10 +93,17 @@ export default function App() {
   }, []);
 
   const confirmAction = useCallback(
-    (o: { title: string; body: string; action: Action; danger?: boolean }) =>
-      new Promise<boolean>((resolve) => setConfirm({ ...o, resolve })),
+    (o: { title: string; body: string; action: Action; danger?: boolean }) => new Promise<boolean>((resolve) => setConfirm({ ...o, resolve })),
     [],
   );
+
+  const go = useCallback((to: Route) => setRoute(to), [setRoute]);
+  const openApp = useCallback((pkg: string) => setRoute({ area: "apps", app: pkg }), [setRoute]);
+
+  const cancel = useCallback(() => {
+    confirm?.resolve(false);
+    setConfirm(null);
+  }, [confirm]);
 
   const runConfirmed = async () => {
     if (!confirm || !serial) return;
@@ -111,90 +121,84 @@ export default function App() {
     }
   };
 
-  const Active = NAV.find((n) => n.id === page)?.el ?? OverviewPage;
+  const Active = PAGES[route.area] ?? InicioPage;
+  const rev = confirm ? reversal(confirm.action) : null;
 
   return (
-    <Ctx.Provider value={{ serial, toast, confirmAction }}>
+    <Ctx.Provider value={{ serial, route, go, openApp, toast, confirmAction }}>
       <div className="shell">
-        <aside className="sidebar">
+        <nav className="rail" aria-label="Navegação principal">
           <div className="brand">
-            <div className="brand-mark"><Smartphone size={18} /></div>
-            <div>
+            <div className="brand-mark" aria-hidden><Smartphone size={18} /></div>
+            <div className="brand-text">
               <strong>Phone Deck</strong>
               <span>visão e controle via USB</span>
             </div>
           </div>
-          <nav>
-            {NAV.map((n) => (
-              <button key={n.id} className={`nav-item ${page === n.id ? "active" : ""}`} onClick={() => setPage(n.id)}>
-                <n.icon size={17} /> {n.label}
-              </button>
-            ))}
-          </nav>
-          <div className="sidebar-foot">
-            <button className="btn ghost full" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />} Tema {theme === "dark" ? "claro" : "escuro"}
+          {NAV.map((n) => (
+            <button
+              key={n.id}
+              type="button"
+              className="nav-item"
+              aria-current={route.area === n.id ? "page" : undefined}
+              onClick={() => go({ area: n.id })}
+            >
+              <n.icon size={18} aria-hidden />
+              <span className="nav-label">{n.label}</span>
+              {n.id === "diagnostico" && problemCount ? <span className="nav-count" aria-label={`${problemCount} problemas`}>{problemCount}</span> : null}
             </button>
+          ))}
+          <div className="rail-foot">
+            <p className="rail-note">Tudo local. Nenhum dado sai deste computador.</p>
+            <LuckButton variant="ghost" size="sm" fullWidth iconLeft={theme === "dark" ? <Sun size={16} /> : <Moon size={16} />} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+              <span className="nav-label">Tema {theme === "dark" ? "claro" : "escuro"}</span>
+            </LuckButton>
           </div>
-        </aside>
+        </nav>
 
         <main className="main">
-          <div className="topbar">
-            <div className="row gap">
-              <span className={`status-dot ${serial ? "on" : pending ? "warn" : "off"}`} />
-              {ready.length > 1 ? (
-                <select value={serial ?? ""} onChange={(e) => setPreferred(e.target.value)}>
+          <header className="topbar">
+            <span className={`status-dot ${serial ? "on" : pending ? "warn" : "off"}`} aria-hidden />
+            {ready.length > 1 ? (
+              <label className="row gap-sm">
+                <span className="sr-only">Aparelho</span>
+                <select className="field" value={serial ?? ""} onChange={(e) => setPreferred(e.target.value)}>
                   {ready.map((d) => (
                     <option key={d.serial} value={d.serial}>{d.model || d.serial}</option>
                   ))}
                 </select>
-              ) : (
-                <strong>{current ? current.model || current.serial : pending ? "Aguardando autorização" : "Nenhum aparelho"}</strong>
-              )}
-              {current && <span className="muted small"><Usb size={13} /> {current.transport || "conectado"}</span>}
-            </div>
-            <span className="muted small"><Activity size={13} /> atualização automática a cada 3 s</span>
-          </div>
+              </label>
+            ) : (
+              <strong>{current ? current.model || current.serial : pending ? "Aguardando autorização" : "Nenhum aparelho"}</strong>
+            )}
+            {current && <span className="muted small row gap-xs"><Usb size={13} aria-hidden /> {current.transport || "conectado"}</span>}
+            {api.source === "mock" && <LuckBadge tone="company">dados de demonstração</LuckBadge>}
+          </header>
 
           {serial ? (
-            <Active key={serial} />
+            <Active key={`${serial}-${route.area}`} />
           ) : (
-            <div className="connect">
-              <Smartphone size={42} />
-              <h2>{pending ? "Autorize este computador no celular" : "Conecte seu Android pelo cabo USB"}</h2>
-              {adbError ? (
-                <p className="error-box">{adbError}</p>
-              ) : pending ? (
-                <p>Na tela do celular apareceu <b>“Permitir depuração USB?”</b>. Marque “Sempre permitir” e toque em <b>Permitir</b>.</p>
-              ) : (
-                <ol>
-                  <li>Configurações → Sobre o telefone → Informações de software → toque 7× em <b>Número de compilação</b>.</li>
-                  <li>Configurações → Opções do desenvolvedor → ative <b>Depuração USB</b>.</li>
-                  <li>Conecte o cabo e aceite o pedido <b>“Permitir depuração USB?”</b>.</li>
-                </ol>
-              )}
-            </div>
+            <ConnectScreen polled={polled} adbError={adbError} found={devices.length > 0} pending={!!pending} />
           )}
         </main>
       </div>
 
-      {confirm && (
-        <div className="modal-backdrop">
-          <div className="modal" role="dialog" aria-modal="true">
-            <h3>{confirm.title}</h3>
-            <p>{confirm.body}</p>
-            <code className="cmd">adb shell · {describe(confirm.action)}</code>
-            <div className="row gap end">
-              <button className="btn ghost" disabled={busy} onClick={() => { confirm.resolve(false); setConfirm(null); }}>Cancelar</button>
-              <button className={`btn ${confirm.danger ? "danger" : "primary"}`} disabled={busy} onClick={runConfirmed}>
+      <LuckDialog open={!!confirm} heading={confirm?.title ?? ""} description={confirm?.body} persistent={busy} onClose={cancel}>
+        {confirm && rev && (
+          <>
+            <LuckBadge tone={rev.reversible ? "neutral" : "danger"}>{rev.text}</LuckBadge>
+            <code className="l-evidence" style={{ marginTop: 0 }}>adb shell {command(confirm.action)}</code>
+            <div className="row gap-sm end">
+              <LuckButton variant="ghost" disabled={busy} onClick={cancel}>Cancelar</LuckButton>
+              <LuckButton variant={confirm.danger ? "secondary" : "primary"} danger={confirm.danger} loading={busy} onClick={runConfirmed}>
                 {busy ? "Aplicando…" : "Aplicar"}
-              </button>
+              </LuckButton>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </LuckDialog>
 
-      <div className="toasts">
+      <div className="toasts" role="status" aria-live="polite">
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.kind}`}>{t.msg}</div>
         ))}
@@ -203,15 +207,48 @@ export default function App() {
   );
 }
 
-function describe(a: Action): string {
-  switch (a.kind) {
-    case "set_setting": return `settings put ${a.namespace} ${a.key} ${a.value}`;
-    case "force_stop": return `am force-stop ${a.package}`;
-    case "set_standby_bucket": return `am set-standby-bucket ${a.package} ${a.bucket}`;
-    case "set_background": return `cmd appops set ${a.package} RUN_ANY_IN_BACKGROUND ${a.mode}`;
-    case "trim_caches": return "pm trim-caches 999G";
-    case "bg_dexopt": return "cmd package bg-dexopt-job";
-    case "reboot": return "reboot";
-    case "uninstall_user_app": return `pm uninstall --user 0 ${a.package}`;
-  }
+/** Conexão em 3 passos com o estado real de cada um. */
+function ConnectScreen({ polled, adbError, found, pending }: { polled: boolean; adbError: string | null; found: boolean; pending: boolean }) {
+  const noIpc = !isTauri() && api.source !== "mock";
+  const adbOk = polled && !adbError;
+  const s1 = !polled ? "current" : adbOk ? "done" : "error";
+  const s2 = !adbOk ? "todo" : found ? "done" : "current";
+  const s3 = !found ? "todo" : pending ? "current" : "done";
+  return (
+    <div className="connect">
+      <div className="connect-head">
+        <div className="brand-mark lg" aria-hidden><Smartphone size={24} /></div>
+        <h1>{pending ? "Falta um passo para conectar" : "Conecte seu Android pelo cabo USB"}</h1>
+        <p className="muted">O Phone Deck lê o aparelho pelo adb, sem root e sem enviar nada para a internet.</p>
+      </div>
+      <LuckCard heading="Conectando" index={`${[s1, s2, s3].filter((s) => s === "done").length}/3`} hint="verificando a cada 3 s" padded={false} style={{ width: "min(560px, 100%)" }}>
+        <Steps>
+          <Step state={s1} title={adbOk ? "adb encontrado" : "Procurando o adb"}>
+            {adbError && (
+              <div className="muted small">
+                {noIpc ? "Abra pelo aplicativo Phone Deck: o navegador não acessa o adb." : <>Instale as ferramentas do Android (<code>android-tools</code> / <code>adb</code>) ou defina a variável <code>ADB</code>.</>}
+                <code className="l-evidence" style={{ display: "block" }}>{adbError}</code>
+              </div>
+            )}
+          </Step>
+          <Step state={s2} title={found ? "Celular detectado no USB" : "Esperando o celular no USB"}>
+            {adbOk && !found && (
+              <ol className="muted small steps-help">
+                <li>Configurações › Sobre o telefone › Informações de software › toque 7× em <b>Número de compilação</b>.</li>
+                <li>Configurações › Opções do desenvolvedor › ative <b>Depuração USB</b>.</li>
+                <li>Conecte o cabo.</li>
+              </ol>
+            )}
+          </Step>
+          <Step state={s3} title={pending ? "Aguardando sua autorização no celular" : "Autorizar este computador"}>
+            {pending && (
+              <p className="callout">
+                Na tela do celular apareceu <b>“Permitir depuração USB?”</b>. Marque <b>“Sempre permitir deste computador”</b> e toque em <b>Permitir</b>.
+              </p>
+            )}
+          </Step>
+        </Steps>
+      </LuckCard>
+    </div>
+  );
 }
