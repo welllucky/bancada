@@ -179,3 +179,10 @@ line.grid { stroke: var(--border); stroke-width: 1; }
   .grid.two { grid-template-columns: 1fr; }
 }
 .l-card__body > .l-badge { align-self: flex-start; }
+
+/* Dado antigo enquanto atualiza: esmaecido e acinzentado, sem bloquear a tela. O atraso evita piscar em leituras rápidas. */
+.is-stale .l-card__body, .is-stale .l-banner, .is-stale .l-stat { opacity: .55; filter: grayscale(.6); transition: opacity var(--d-base) var(--ease-standard) 150ms, filter var(--d-base) var(--ease-standard) 150ms; }
+.l-card__body, .l-banner, .l-stat { transition: opacity var(--d-base) var(--ease-standard), filter var(--d-base) var(--ease-standard); }
+/* Primeiro carregamento: spinner centralizado na área. */
+.l-empty[role="status"] { min-height: 160px; }
+.page > .l-empty[role="status"] { min-height: 50vh; }

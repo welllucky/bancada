@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, History, House, LayoutGrid, Moon, Smartphone, Sun, Usb } from "lucide-react";
 import { api, Action, Device, isTauri, Recommendation } from "./api";
 import { command, reversal } from "./actions";
-import { Area, Ctx, Route, useLocal } from "./hooks";
+import { Area, Ctx, Route, useAnyStale, useLocal } from "./hooks";
 import { LuckBadge, LuckButton, LuckCard, LuckDialog, Step, Steps } from "./luck";
 import { problems } from "./recs";
 import InicioPage from "./pages/Inicio";
@@ -47,6 +47,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [problemCount, setProblemCount] = useState<number | null>(null);
   const tid = useRef(0);
+  const refreshing = useAnyStale();
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -155,7 +156,7 @@ export default function App() {
           </div>
         </nav>
 
-        <main className="main">
+        <main className="main" aria-busy={refreshing || undefined}>
           <header className="topbar">
             <span className={`status-dot ${serial ? "on" : pending ? "warn" : "off"}`} aria-hidden />
             {ready.length > 1 ? (
@@ -175,7 +176,7 @@ export default function App() {
           </header>
 
           {serial ? (
-            <Active key={`${serial}-${route.area}`} />
+            <div className={refreshing ? "is-stale" : undefined}><Active key={`${serial}-${route.area}`} /></div>
           ) : (
             <ConnectScreen polled={polled} adbError={adbError} found={devices.length > 0} pending={!!pending} />
           )}
