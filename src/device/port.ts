@@ -1,5 +1,6 @@
 import type {
   AppMeta,
+  AppTimeline,
   Action, AppDetail, AppEntry, BatteryHistory, BatteryStats, BluetoothInfo, BootInfo, Device, HistoryData, Network,
   Overview, Processes, Recommendation, SecurityInfo, WifiService, NetConnections, NetLive, NetUsage,
 } from "./types";
@@ -34,6 +35,8 @@ export interface DeviceApi {
   appMeta(serial: string, pkg: string): Promise<AppMeta>;
   /** Nomes já guardados no catálogo local, sem tocar no aparelho. */
   appLabels(): Promise<Record<string, string>>;
+  /** Quando o app esteve na tela, rodou em segundo plano e acordou o aparelho, desde a última carga. */
+  appTimeline(serial: string, pkg: string): Promise<AppTimeline>;
   wifiServices(): Promise<WifiService[]>;
   wifiPair(addr: string, code: string): Promise<string>;
   wifiConnect(addr: string): Promise<string>;

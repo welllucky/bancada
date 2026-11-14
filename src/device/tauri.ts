@@ -24,6 +24,7 @@ export const tauriAdapter: DeviceApi = {
   netLive: (serial) => invoke("net_live", { serial }),
   appMeta: (serial, pkg) => invoke("app_meta", { serial, package: pkg }),
   appLabels: () => invoke("app_labels"),
+  appTimeline: (serial, pkg) => invoke("app_timeline", { serial, package: pkg }),
   wifiServices: () => invoke("wifi_services"),
   wifiPair: (addr, code) => invoke("wifi_pair", { addr, code }),
   wifiConnect: (addr) => invoke("wifi_connect", { addr }),

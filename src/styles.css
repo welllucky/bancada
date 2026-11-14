@@ -215,3 +215,21 @@ line.grid { stroke: var(--border); stroke-width: 1; }
 .sk-chart { display: flex; align-items: flex-end; gap: 6px; padding-top: 8px; }
 .sk-chart > span { flex: 1; opacity: 0.6; }
 @media (prefers-reduced-motion: reduce) { .l-skeleton { animation: none; } }
+
+/* Linha do tempo do app (src/pages/AppTimeline.tsx). */
+.tl { display: flex; flex-direction: column; gap: 16px; }
+.tl-lanes { display: flex; flex-direction: column; gap: 6px; }
+.tl-lane { display: grid; grid-template-columns: 130px minmax(0, 1fr); align-items: center; gap: 12px; }
+.tl-name { font-size: var(--text-xs); color: var(--fg-muted); cursor: help; }
+.tl-track { position: relative; height: 22px; border-radius: var(--radius-sm); background: var(--surface-2); overflow: hidden; }
+.tl-off { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--fg) 7%, transparent) 4px 8px); }
+.tl-span { position: absolute; top: 4px; bottom: 4px; border-radius: 2px; opacity: 0.9; }
+.tl-span:hover, .tl-mark:hover { outline: 2px solid var(--fg); z-index: 1; }
+.tl-mark { position: absolute; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; }
+.tl-mark--push { border-radius: 50%; background: var(--chart-2); }
+.tl-mark--alarm { width: 0; height: 0; margin: -5px 0 0 -5px; border: 5px solid transparent; border-bottom: 9px solid var(--warning); border-top: 0; }
+.tl-axis .tl-track { background: none; height: 16px; overflow: visible; }
+.tl-tick { position: absolute; transform: translateX(-50%); font-family: var(--font-mono, monospace); font-size: 10px; color: var(--fg-muted); white-space: nowrap; }
+.tl-tag { display: inline-block; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+@media (max-width: 760px) { .tl-lane { grid-template-columns: 92px minmax(0, 1fr); } .tl-tick:nth-child(even) { display: none; } }
+@media (max-width: 480px) { .tl-tick:nth-child(4n+3) { display: none; } }

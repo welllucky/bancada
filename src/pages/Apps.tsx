@@ -8,6 +8,7 @@ import { fmtNum } from "../format";
 import { fmtAgo, permLabel } from "../permissions";
 import { useDevice, useLoad } from "../hooks";
 import { AppNetCard } from "./Rede";
+import { AppTimelineCard } from "./AppTimeline";
 import { DataTable, ErrorNote, LuckBadge, LuckButton, LuckCard, Segmented, Tone } from "../luck";
 import { BackButton, KV, PageHead, Refresh } from "./common";
 import { SkAppDetail, SkApps, SkChartBody } from "../skeletons";
@@ -185,6 +186,8 @@ function AppDetailPage({ pkg }: { pkg: string }) {
               />
             </LuckCard>
           </div>
+
+          <AppTimelineCard pkg={pkg} />
 
           <div className="grid two">
             <LuckCard heading="Permissões sensíveis" index={String(d.granted_sensitive.length)} padded>

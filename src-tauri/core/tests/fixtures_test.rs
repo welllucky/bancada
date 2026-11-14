@@ -86,3 +86,13 @@ fn bluetooth() {
     assert_eq!(b.bonded.len(), 2);
     assert!(b.bonded.iter().any(|d| d.name.contains("Watch")));
 }
+
+#[test]
+fn app_timeline_from_real_history() {
+    use phone_deck_core::apptimeline::parse_app_timeline;
+    let tl = parse_app_timeline(&fx("history.txt"), &["u0a369".into()], 2026);
+    assert!(tl.start.is_some() && tl.end > tl.start);
+    assert!(tl.spans.iter().any(|s| s.kind == "top"), "WhatsApp aparece na tela no histórico real");
+    assert!(tl.spans.iter().all(|s| s.end >= s.start));
+    assert!(!tl.screen_off.is_empty());
+}
