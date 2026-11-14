@@ -272,6 +272,6 @@ export interface TimelineSpan { kind: "top" | "fg" | "job" | "sync" | "wake_lock
 export interface TimelineMark { kind: "wakeupap" | "tmpwhitelist"; t: number; tag: string; screen_off: boolean }
 export interface AppTimeline { start: number | null; end: number | null; screen_off: [number, number][]; spans: TimelineSpan[]; marks: TimelineMark[] }
 
-/** Atualização do próprio Phone Deck. `configured` falso em builds sem chave de atualização. */
+/** Atualização da própria Bancada. `configured` falso em builds sem chave de atualização. */
 export interface UpdateInfo { current: string; available: string | null; notes: string | null; date: string | null; configured: boolean }
 export interface UpdateProgress { done: number; total: number | null }

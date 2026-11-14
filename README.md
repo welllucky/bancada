@@ -1,4 +1,11 @@
-# Phone Deck
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/marca/bancada-logo-escuro.svg">
+    <img src="docs/marca/bancada-logo-claro.svg" alt="Bancada" width="360">
+  </picture>
+</p>
+
+# Bancada
 
 Aplicativo **nativo** (Linux, macOS e Windows, um único código) para ter visão e controle do ciclo de vida de um celular Android conectado por **USB (ADB)**.
 

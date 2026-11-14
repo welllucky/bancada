@@ -114,7 +114,7 @@ function Seguranca() {
           <Issue
             tone={d.adb_enabled ? "warning" : "success"}
             title={d.adb_wifi ? "Depuração por Wi-Fi ligada" : d.adb_enabled ? "Depuração USB ligada" : "Depuração desligada"}
-            detail={d.adb_wifi ? "Útil para usar o Phone Deck sem cabo, mas qualquer computador autorizado na mesma rede controla o celular. Desligue quando terminar." : d.adb_enabled ? "O Phone Deck precisa dela, mas desligue quando terminar: um computador autorizado tem amplo acesso ao aparelho." : "Nenhum computador consegue controlar o aparelho."}
+            detail={d.adb_wifi ? "Útil para usar a Bancada sem cabo, mas qualquer computador autorizado na mesma rede controla o celular. Desligue quando terminar." : d.adb_enabled ? "A Bancada precisa dela, mas desligue quando terminar: um computador autorizado tem amplo acesso ao aparelho." : "Nenhum computador consegue controlar o aparelho."}
             evidence={`adb_enabled=${d.adb_enabled ? 1 : 0}${d.adb_wifi ? " · adb_wifi=1" : ""}${d.dev_options ? " · opções do desenvolvedor ativas" : ""}`}
           />
         </div>

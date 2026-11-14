@@ -58,7 +58,7 @@ export function UpdateControl() {
         <LuckDialog
           open={open}
           persistent={busy}
-          heading={`Phone Deck ${info.available}`}
+          heading={`Bancada ${info.available}`}
           description={`Você está na ${info.current}. O app baixa a versão nova, confere a assinatura, instala e reinicia.`}
           onClose={() => !busy && setOpen(false)}
         >
@@ -95,7 +95,7 @@ export function AppVersion() {
   useEffect(() => {
     api.appVersion().then(setV).catch(() => {});
   }, []);
-  return v ? <span className="rail-version" title={`Phone Deck ${v}`}>v{v}</span> : null;
+  return v ? <span className="rail-version" title={`Bancada ${v}`}>v{v}</span> : null;
 }
 
 /** Notas da release (Markdown simples gerado pelo pipeline: `### Seção` e `- item — hash`). */

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Phone Deck",
+  "productName": "Bancada",
   "version": "0.1.0",
   "identifier": "dev.wellington.phonedeck",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Phone Deck",
+        "title": "Bancada",
         "width": 1320,
         "height": 860,
         "minWidth": 960,
@@ -29,7 +29,7 @@
     "targets": "all",
     "category": "Utility",
     "shortDescription": "Visão e controle do seu celular Android via USB",
-    "longDescription": "Phone Deck mostra bateria, processos, apps, rede, Bluetooth, boot e segurança de um celular Android conectado por USB (ADB) e aplica otimizações seguras com um clique.",
+    "longDescription": "Bancada mostra bateria, processos, apps, rede, Bluetooth, boot e segurança de um celular Android conectado por USB (ADB) e aplica otimizações seguras com um clique.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

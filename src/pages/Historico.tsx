@@ -58,7 +58,7 @@ export default function HistoricoPage() {
       ) : !d ? (
         <SkHistorico />
       ) : s.length === 0 ? (
-        <div className="l-empty">Ainda não há amostras neste período. Deixe o aparelho conectado com o Phone Deck aberto.</div>
+        <div className="l-empty">Ainda não há amostras neste período. Deixe o aparelho conectado com a Bancada aberta.</div>
       ) : (
         <>
           <div className="grid stats">

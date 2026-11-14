@@ -72,7 +72,7 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.version.outputs.tag }}
         run: |
-          args=(-f tag_name="$TAG" -f name="Phone Deck $TAG" -F body=@release-notes.md -F draft=true)
+          args=(-f tag_name="$TAG" -f name="Bancada $TAG" -F body=@release-notes.md -F draft=true)
           # No próprio repositório a tag aponta para o commit; num repo só de releases, para o branch padrão dele.
           if [ "$RELEASE_REPO" = "$GITHUB_REPOSITORY" ]; then args+=(-f target_commitish="$GITHUB_SHA"); fi
           id=$(gh api "repos/$RELEASE_REPO/releases" "${args[@]}" -q .id)
