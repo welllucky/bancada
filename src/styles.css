@@ -85,7 +85,7 @@ button { font: inherit; color: inherit; }
 .status-dot.warn { background: var(--warning); }
 
 /* página */
-.page { display: flex; flex-direction: column; gap: var(--gap-grid); padding: 28px; max-width: 1280px; width: 100%; }
+.page { display: flex; flex-direction: column; gap: var(--gap-grid); padding: 28px; width: 100%; min-width: 0; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .page-head h1 { font-size: var(--text-h3); }
 .page-tabs { margin-top: -4px; }
