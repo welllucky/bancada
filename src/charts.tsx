@@ -170,13 +170,15 @@ export const Bars = ({ data, unit, label, height = 150 }: { data: { key: string;
   if (!data.length) return <div className="l-empty">Sem dados ainda.</div>;
   const max = Math.max(...data.map((d) => d.value), 1);
   const W = 560, H = height, B = 24, gap = 16;
-  const bw = (W - gap * (data.length - 1)) / data.length;
+  // Barras com largura máxima, centralizadas: com um só dia de dado a barra não ocupa o gráfico inteiro.
+  const bw = Math.min(72, (W - gap * (data.length - 1)) / data.length);
+  const x0 = (W - (bw * data.length + gap * (data.length - 1))) / 2;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height }} role="img" aria-label={label}>
       <line x1={0} x2={W} y1={H - B} y2={H - B} className="chart-baseline" />
       {data.map((d, i) => {
         const h = ((H - B - 20) * d.value) / max;
-        const x = i * (bw + gap);
+        const x = x0 + i * (bw + gap);
         const last = i === data.length - 1;
         return (
           <g key={d.key}>

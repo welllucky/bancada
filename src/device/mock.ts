@@ -211,7 +211,7 @@ export const mockAdapter: DeviceApi = {
       granted_sensitive: pkg === "com.whatsapp" ? ["RECORD_AUDIO", "CAMERA", "READ_CONTACTS", "ACCESS_FINE_LOCATION", "POST_NOTIFICATIONS"] : ["POST_NOTIFICATIONS"],
       bucket: a?.bucket,
       run_in_background: "allow",
-      recent_ops: pkg === "com.whatsapp" ? [{ op: "RECORD_AUDIO", ago: "2h4m" }, { op: "CAMERA", ago: "1d2h" }, { op: "FINE_LOCATION", ago: "3d" }] : [],
+      recent_ops: pkg === "com.whatsapp" ? [{ op: "RECORD_AUDIO", ago: "2h4m12s310ms" }, { op: "CAMERA", ago: "1d2h7m3s5ms" }, { op: "WAKE_LOCK", ago: "34s30ms" }, { op: "FINE_LOCATION", ago: "3d0h54m53s831ms" }] : [],
     });
   },
   network: () =>
