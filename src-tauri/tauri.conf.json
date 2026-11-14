@@ -47,7 +47,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDkzRjM4QzMxNEFEOTg0NDgKUldSSWhObEtNWXp6ay9VdTUwZ2JTZytOVzdHVThPS1BhcmpFQmRoQ25NSlprRTJwNmtsREp2MmIK",
       "endpoints": [
         "https://github.com/welllucky/phone-deck/releases/latest/download/latest.json"
       ],
