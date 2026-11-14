@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { AppIcon } from "../appIcon";
-import { ArrowLeft, Ban, Square, Trash2 } from "lucide-react";
+import { Ban, Square, Trash2 } from "lucide-react";
 import { Action, api, AppEntry } from "../api";
 import { appLabel, installerLabel } from "../appNames";
 import { Bars } from "../charts";
@@ -8,8 +8,9 @@ import { fmtNum } from "../format";
 import { fmtAgo, permLabel } from "../permissions";
 import { useDevice, useLoad } from "../hooks";
 import { AppNetCard } from "./Rede";
-import { DataTable, ErrorNote, Loading, LuckBadge, LuckButton, LuckCard, Segmented, Tone } from "../luck";
-import { KV, PageHead, Refresh } from "./common";
+import { DataTable, ErrorNote, LuckBadge, LuckButton, LuckCard, Segmented, Tone } from "../luck";
+import { BackButton, KV, PageHead, Refresh } from "./common";
+import { SkAppDetail, SkApps, SkChartBody } from "../skeletons";
 
 /** Frequência em segundo plano, nos termos do usuário (bucket de standby do Android). */
 export const BUCKETS = [
@@ -65,7 +66,7 @@ function AppList() {
       {apps.error ? (
         <ErrorNote error={apps.error} title="Não foi possível listar os apps" />
       ) : !apps.data ? (
-        <Loading label="Listando apps…" />
+        <SkApps />
       ) : (
         <LuckCard padded={false}>
           <DataTable
@@ -94,13 +95,13 @@ function AppList() {
 const SENSITIVE = new Set(["RECORD_AUDIO", "CAMERA", "ACCESS_BACKGROUND_LOCATION", "ACCESS_FINE_LOCATION", "READ_SMS", "READ_CONTACTS", "READ_CALL_LOG"]);
 
 function AppDetailPage({ pkg }: { pkg: string }) {
-  const { go, confirmAction } = useDevice();
+  const { back: goBack, confirmAction } = useDevice();
   const detail = useLoad((s) => api.appDetail(s, pkg), [pkg]);
   const list = useLoad(api.apps);
   const hist = useLoad((s) => api.history(s, 7), [pkg]);
   const entry: AppEntry | undefined = list.data?.find((a) => a.package === pkg);
   const d = detail.data;
-  const back = () => go({ area: "apps" });
+  const back = () => goBack({ area: "apps" });
 
   const daily = useMemo(() => {
     // Cada amostra é acumulada desde a última carga: o máximo do dia é o gasto daquele dia.
@@ -130,9 +131,7 @@ function AppDetailPage({ pkg }: { pkg: string }) {
 
   return (
     <div className="page">
-      <div>
-        <LuckButton variant="ghost" size="sm" iconLeft={<ArrowLeft size={14} />} onClick={back}>Apps</LuckButton>
-      </div>
+      <BackButton fallback={{ area: "apps" }} />
       <header className="page-head">
         <div className="row gap-md">
           <AppIcon pkg={pkg} size={64} />
@@ -168,12 +167,12 @@ function AppDetailPage({ pkg }: { pkg: string }) {
       {detail.error ? (
         <ErrorNote error={detail.error} title="Não foi possível ler este app" />
       ) : !d ? (
-        <Loading />
+        <SkAppDetail />
       ) : (
         <>
           <div className="grid two">
             <LuckCard heading="Consumo por dia" hint="últimos 7 dias, mAh" padded>
-              {hist.error ? <ErrorNote error={hist.error} /> : !hist.data ? <Loading /> : <Bars data={daily} unit="mAh" label={`Consumo diário de ${name}`} />}
+              {hist.error ? <ErrorNote error={hist.error} /> : !hist.data ? <SkChartBody height={150} /> : <Bars data={daily} unit="mAh" label={`Consumo diário de ${name}`} />}
               {entry?.mah ? <p className="muted small">{fmtNum(entry.mah, 1)} mAh desde a última carga completa.</p> : null}
             </LuckCard>
             <LuckCard heading="Frequência em segundo plano" padded>

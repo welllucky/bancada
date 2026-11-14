@@ -3,9 +3,10 @@ import { api } from "../api";
 import { appLabel } from "../appNames";
 import { fmtDate, fmtDur, fmtKb, fmtNum } from "../format";
 import { useDevice, useLoad } from "../hooks";
-import { Banner, ErrorNote, Issue, Loading, LuckBadge, LuckButton, LuckCard, LuckMeter, LuckStat, Severity, Tone } from "../luck";
+import { Banner, ErrorNote, Issue, LuckBadge, LuckButton, LuckCard, LuckMeter, LuckStat, Severity, Tone } from "../luck";
 import { problems, recPackage, recTitle, SEV_LABEL, toneOf } from "../recs";
 import { KV, PageHead, Refresh } from "./common";
+import { SkInicio, SkIssueList } from "../skeletons";
 
 const STATUS: Record<string, string> = { Charging: "carregando", Discharging: "descarregando", Full: "carga completa", "Not charging": "sem carregar" };
 const THERMAL = ["normal", "leve", "moderado", "severo", "crítico", "emergência", "desligamento"];
@@ -17,7 +18,7 @@ export default function InicioPage() {
   const d = ov.data;
 
   if (ov.error) return <div className="page"><PageHead title="Início" /><ErrorNote error={ov.error} /></div>;
-  if (!d) return <div className="page"><PageHead title="Início" /><Loading /></div>;
+  if (!d) return <div className="page"><PageHead title="Início" /><SkInicio /></div>;
 
   const b = d.battery;
   const list = problems(recs.data ?? []);
@@ -79,7 +80,7 @@ export default function InicioPage() {
           {recs.error ? (
             <div className="pad"><ErrorNote error={recs.error} title="Não foi possível analisar o aparelho" /></div>
           ) : !recs.data ? (
-            <Loading label="Analisando bateria, processos e configurações…" />
+            <SkIssueList n={3} />
           ) : list.length === 0 ? (
             <div className="l-empty">Nenhum problema encontrado. Sugestões opcionais ficam em Diagnóstico.</div>
           ) : (

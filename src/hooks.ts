@@ -13,7 +13,12 @@ export interface Route {
 export interface DeviceCtx {
   serial: string | null;
   route: Route;
-  go: (to: Route) => void;
+  /** Navega. `replace` troca a entrada atual do histórico em vez de criar outra (ex.: trocar de aba). */
+  go: (to: Route, opts?: { replace?: boolean }) => void;
+  /** Volta para a tela anterior; sem histórico, vai para `fallback`. */
+  back: (fallback: Route) => void;
+  /** Tela anterior, para o rótulo do botão de voltar. */
+  prev: Route | null;
   /** Abre o detalhe do app, de qualquer tela. */
   openApp: (pkg: string) => void;
   toast: (msg: string, kind?: "ok" | "err") => void;
@@ -26,6 +31,8 @@ export const Ctx = createContext<DeviceCtx>({
   serial: null,
   route: { area: "inicio" },
   go: () => {},
+  back: () => {},
+  prev: null,
   openApp: () => {},
   toast: () => {},
   confirmAction: async () => false,

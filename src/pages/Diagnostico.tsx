@@ -6,10 +6,11 @@ import { appLabel } from "../appNames";
 import { PART_LABEL, partColor, StackBar, TimeChart } from "../charts";
 import { fmtDur, fmtKb, fmtNum, pkgOf } from "../format";
 import { useDevice, useLoad } from "../hooks";
-import { DataTable, ErrorNote, Issue, Loading, LuckBadge, LuckButton, LuckCard, LuckIconButton, LuckMeter, LuckStat, Segmented } from "../luck";
+import { DataTable, ErrorNote, Issue, LuckBadge, LuckButton, LuckCard, LuckIconButton, LuckMeter, LuckStat, Segmented } from "../luck";
 import { GROUP_LABEL, groupOf, recPackage, RecGroup, recTitle, SEV_LABEL, toneOf } from "../recs";
 import { AppLink, PageHead, Refresh, Stop, Tabs, useTab } from "./common";
 import { Rede } from "./Rede";
+import { SkAgora, SkBateria, SkChartBody, SkMemoria, SkProblemas } from "../skeletons";
 
 const TABS = ["problemas", "bateria", "agora", "memoria", "rede"] as const;
 type Tab = (typeof TABS)[number];
@@ -83,7 +84,7 @@ function Problemas() {
   };
 
   if (recs.error) return <ErrorNote error={recs.error} title="Não foi possível analisar o aparelho" />;
-  if (!recs.data) return <Loading label="Analisando bateria, processos e configurações…" />;
+  if (!recs.data) return <SkProblemas />;
   const maint = groups.get("manutencao") ?? [];
   const resolved = recs.data.filter((r) => r.resolved);
   const open = recs.data.length - resolved.length;
@@ -142,7 +143,7 @@ function Bateria() {
 
   if (stats.error) return <ErrorNote error={stats.error} title="Não foi possível ler o consumo de bateria" />;
   const d = stats.data;
-  if (!d) return <Loading label="Lendo o consumo de bateria (pode levar alguns segundos)…" />;
+  if (!d) return <SkBateria note="O consumo de bateria pode levar alguns segundos para chegar." />;
   const s = d.summary;
   const maxMah = Math.max(...d.consumers.map((c) => c.mah), 1);
   const rows: Timed[] = wake === "wakelocks" ? d.wakelocks : wake === "jobs" ? d.jobs : wake === "kernel" ? d.kernel_wakelocks : d.wakeup_reasons;
@@ -176,7 +177,7 @@ function Bateria() {
               { label: "Temperatura", unit: " °C", color: "var(--chart-4)", axis: "right", points: hist.data.points.filter((p) => p.temp != null).map((p) => [p.t, p.temp!]) },
             ]}
           />
-        ) : hist.error ? <ErrorNote error={hist.error} /> : <Loading />}
+        ) : hist.error ? <ErrorNote error={hist.error} /> : <SkChartBody height={220} />}
       </LuckCard>
 
       <LuckCard heading="Quem gastou a bateria" hint="clique para abrir o app" padded={false}>
@@ -235,7 +236,7 @@ function Agora() {
   const procs = useLoad(api.processes, [], paused ? undefined : 3000);
   const d = procs.data;
   if (procs.error) return <ErrorNote error={procs.error} title="Não foi possível ler os processos" />;
-  if (!d) return <Loading />;
+  if (!d) return <SkAgora />;
   const asleep = !!d.wakefulness && d.wakefulness !== "Awake";
   const match = (n: string) => !q || n.toLowerCase().includes(q.toLowerCase()) || appLabel(n).toLowerCase().includes(q.toLowerCase());
   const busy = d.cpu?.busy_pct ?? 0;
@@ -320,7 +321,7 @@ function Memoria() {
   const ov = useLoad(api.overview);
   const mem = useLoad(api.memory);
   if (mem.error) return <ErrorNote error={mem.error} title="Não foi possível ler a memória" />;
-  if (!mem.data) return <Loading label="Lendo a memória…" />;
+  if (!mem.data) return <SkMemoria />;
   const o = ov.data;
   const used = o?.ram_total_kb && o.ram_avail_kb != null ? o.ram_total_kb - o.ram_avail_kb : undefined;
   const swapUsed = o?.swap_total_kb != null && o.swap_free_kb != null ? o.swap_total_kb - o.swap_free_kb : undefined;

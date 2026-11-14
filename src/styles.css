@@ -205,3 +205,13 @@ line.grid { stroke: var(--border); stroke-width: 1; }
 }
 .chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .l-dialog { max-height: calc(100vh - 48px); overflow: auto; }
+
+/* Esqueletos do primeiro carregamento (src/skeletons.tsx). */
+.sk { display: flex; flex-direction: column; gap: var(--gap-grid); min-width: 0; }
+.sk-row { display: flex; align-items: center; gap: 14px; padding: 12px var(--pad-card); border-bottom: 1px solid var(--border); }
+.sk-row:last-child { border-bottom: 0; }
+.sk-issue { display: flex; align-items: flex-start; gap: 14px; padding: 18px var(--pad-card); border-bottom: 1px solid var(--border); }
+.sk-issue:last-child { border-bottom: 0; }
+.sk-chart { display: flex; align-items: flex-end; gap: 6px; padding-top: 8px; }
+.sk-chart > span { flex: 1; opacity: 0.6; }
+@media (prefers-reduced-motion: reduce) { .l-skeleton { animation: none; } }
