@@ -5,8 +5,9 @@ import { appLabel } from "../appNames";
 import { TimeChart } from "../charts";
 import { fmtBytes, fmtNum, fmtRate } from "../format";
 import { useDevice, useLoad } from "../hooks";
-import { DataTable, ErrorNote, Loading, LuckBadge, LuckCard, LuckStat, Segmented } from "../luck";
+import { DataTable, ErrorNote, LuckBadge, LuckCard, LuckStat, Segmented } from "../luck";
 import { Refresh } from "./common";
+import { SkChartBody, SkRede, SkRowsBody } from "../skeletons";
 
 /**
  * Rede: taxa agora (diferença entre leituras de `/proc/net/dev`), consumo por período e por app
@@ -151,7 +152,7 @@ export function Rede() {
         {live.error && !live.rates.length ? (
           <ErrorNote error={live.error} title="Não foi possível ler a taxa da rede" />
         ) : live.rates.length < 2 ? (
-          <Loading label="Medindo a taxa…" />
+          <SkChartBody height={180} label="Medindo a taxa…" />
         ) : (
           <TimeChart
             label="Taxa de download e upload nos últimos minutos"
@@ -173,7 +174,7 @@ export function Rede() {
       {usage.error ? (
         <ErrorNote error={usage.error} title="Não foi possível ler o consumo de rede" />
       ) : !usage.data ? (
-        <Loading label="Lendo o consumo de rede…" />
+        <SkRede />
       ) : !usage.data.available ? (
         <LuckCard padded><p className="muted">Este aparelho não informou o consumo de rede pelo adb.</p></LuckCard>
       ) : (
@@ -243,7 +244,7 @@ function Connections({ sockets, readable, error, loaded, extra, withApp }: {
       {error ? (
         <div className="pad"><ErrorNote error={error} title="Não foi possível ler as conexões" /></div>
       ) : !loaded ? (
-        <Loading />
+        <SkRowsBody rows={4} icon={withApp} label="Lendo as conexões…" />
       ) : readable === false ? (
         <p className="pad muted">O Android deste aparelho não deixa ler as conexões pelo adb.</p>
       ) : (
@@ -282,7 +283,7 @@ export function AppNetCard({ pkg }: { pkg: string }) {
   return (
     <>
       <LuckCard heading="Rede" hint="últimos 7 dias" padded>
-        {usage.error ? <ErrorNote error={usage.error} /> : !usage.data ? <Loading /> : !mine ? (
+        {usage.error ? <ErrorNote error={usage.error} /> : !usage.data ? <SkRowsBody rows={1} label="Lendo o consumo de rede…" /> : !mine ? (
           <p className="muted">Sem uso de rede registrado nos últimos 7 dias.</p>
         ) : (
           <div className="grid stats">

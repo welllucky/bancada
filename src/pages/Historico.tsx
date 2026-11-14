@@ -6,8 +6,9 @@ import { appLabel } from "../appNames";
 import { TimeChart } from "../charts";
 import { fmtDate, fmtNum } from "../format";
 import { useDevice, useLoad } from "../hooks";
-import { DataTable, ErrorNote, Loading, LuckCard, LuckStat, Segmented } from "../luck";
+import { DataTable, ErrorNote, LuckCard, LuckStat, Segmented } from "../luck";
 import { PageHead, Refresh } from "./common";
+import { SkHistorico } from "../skeletons";
 
 type Days = "1" | "7" | "30" | "365";
 
@@ -55,7 +56,7 @@ export default function HistoricoPage() {
       {h.error ? (
         <ErrorNote error={h.error} title="Não foi possível ler o histórico" />
       ) : !d ? (
-        <Loading />
+        <SkHistorico />
       ) : s.length === 0 ? (
         <div className="l-empty">Ainda não há amostras neste período. Deixe o aparelho conectado com o Phone Deck aberto.</div>
       ) : (

@@ -2,8 +2,9 @@ import { Bluetooth as BtIcon, Headphones, Watch } from "lucide-react";
 import { api } from "../api";
 import { fmtDate, fmtDur } from "../format";
 import { useDevice, useLoad } from "../hooks";
-import { ErrorNote, Issue, Loading, LuckBadge, LuckCard, LuckStat, LuckSwitch, Severity } from "../luck";
+import { ErrorNote, Issue, LuckBadge, LuckCard, LuckStat, LuckSwitch, Severity } from "../luck";
 import { AppLink, KV, PageHead, PkgList, Refresh, Tabs, useTab } from "./common";
+import { SkCards } from "../skeletons";
 
 const TABS = ["sistema", "seguranca", "rede", "bluetooth"] as const;
 type Tab = (typeof TABS)[number];
@@ -43,7 +44,7 @@ function Sistema() {
   const boot = useLoad(api.boot);
   const d = boot.data;
   if (boot.error) return <ErrorNote error={boot.error} />;
-  if (!d) return <Loading />;
+  if (!d) return <SkCards />;
   const locked = d.bootloader_locked === "1" || d.vbmeta_state === "locked";
   // Cada item só aparece quando o aparelho informa o dado (Knox, por exemplo, só existe na Samsung).
   const checks: Check[] = [];
@@ -92,7 +93,7 @@ function Seguranca() {
   const sec = useLoad(api.security);
   const d = sec.data;
   if (sec.error) return <ErrorNote error={sec.error} />;
-  if (!d) return <Loading />;
+  if (!d) return <SkCards />;
   const sections: { title: string; why: string; items: string[]; risky?: boolean }[] = [
     { title: "Acessibilidade", why: "Podem ler a tela e tocar por você. É a permissão mais usada por golpes bancários.", items: d.accessibility, risky: true },
     { title: "Leitores de notificação", why: "Leem todas as notificações, inclusive códigos de verificação.", items: d.notification_listeners, risky: true },
@@ -160,7 +161,7 @@ function Rede() {
   const net = useLoad(api.network, [], 10000);
   const d = net.data;
   if (net.error) return <ErrorNote error={net.error} />;
-  if (!d) return <Loading />;
+  if (!d) return <SkCards />;
   const w = d.connectivity.wifi;
   const toggle = (key: string, label: string, on: boolean) =>
     confirmAction({
@@ -231,7 +232,7 @@ function Bluetooth() {
   const bt = useLoad(api.bluetooth);
   const d = bt.data;
   if (bt.error) return <ErrorNote error={bt.error} />;
-  if (!d) return <Loading />;
+  if (!d) return <SkCards />;
   return (
     <>
       <div className="row between">

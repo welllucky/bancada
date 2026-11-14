@@ -1,8 +1,8 @@
 import { ReactNode } from "react";
 import { AppIcon } from "../appIcon";
-import { RefreshCw } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import { appLabel } from "../appNames";
-import { useAgo, useDevice } from "../hooks";
+import { Area, Route, useAgo, useDevice } from "../hooks";
 import { LuckButton, LuckTabs, TabItem } from "../luck";
 
 /** Cabeçalho de página: título, subtítulo e ações à direita. */
@@ -33,7 +33,7 @@ export function Refresh({ onClick, loading, at }: { onClick: () => void; loading
 export function useTab<T extends string>(fallback: T, valid: readonly T[]): [T, (t: T) => void] {
   const { route, go } = useDevice();
   const tab = valid.includes(route.tab as T) ? (route.tab as T) : fallback;
-  return [tab, (t: T) => go({ area: route.area, tab: t })];
+  return [tab, (t: T) => go({ ...route, tab: t }, { replace: true })];
 }
 
 export const Tabs = <T extends string,>(p: { value: T; items: TabItem<T>[]; onChange: (v: T) => void; label: string }) => (
@@ -86,3 +86,17 @@ export function PkgList({ items, empty = "nenhum" }: { items: string[]; empty?: 
 export const Stop = ({ children }: { children: ReactNode }) => (
   <span className="row gap-xs end" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>{children}</span>
 );
+
+const AREA_LABEL: Record<Area, string> = { inicio: "Início", diagnostico: "Diagnóstico", apps: "Apps", aparelho: "Aparelho", historico: "Histórico" };
+
+/** Botão de voltar: leva à tela de onde a pessoa veio (com o nome dela); sem histórico, a `fallback`. */
+export function BackButton({ fallback }: { fallback: Route }) {
+  const { back, prev } = useDevice();
+  const target = prev ?? fallback;
+  const label = target.app ? appLabel(target.app) : AREA_LABEL[target.area];
+  return (
+    <div>
+      <LuckButton variant="ghost" size="sm" iconLeft={<ArrowLeft size={14} />} onClick={() => back(fallback)}>{label}</LuckButton>
+    </div>
+  );
+}

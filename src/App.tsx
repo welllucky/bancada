@@ -109,8 +109,42 @@ export default function App() {
     [],
   );
 
-  const go = useCallback((to: Route) => setRoute(to), [setRoute]);
-  const openApp = useCallback((pkg: string) => setRoute({ area: "apps", app: pkg }), [setRoute]);
+  // Navegação pelo histórico do WebView: o botão voltar (e o botão lateral do mouse) refaz o caminho real.
+  type Entry = { route: Route; prev: Route | null; depth: number };
+  const [prev, setPrev] = useState<Route | null>(null);
+  useEffect(() => {
+    const st = history.state as Entry | null;
+    // A tela salva é a verdade; o histórico do WebView (que sobrevive a um recarregamento) só guarda o caminho.
+    history.replaceState({ route, prev: st?.prev ?? null, depth: st?.depth ?? 0 } satisfies Entry, "");
+    setPrev(st?.prev ?? null);
+    const onPop = (e: PopStateEvent) => {
+      const s = e.state as Entry | null;
+      setRoute(s?.route ?? { area: "inicio" });
+      setPrev(s?.prev ?? null);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const routeRef = useRef(route);
+  routeRef.current = route;
+  const go = useCallback((to: Route, opts?: { replace?: boolean }) => {
+    const cur = history.state as Entry | null;
+    if (JSON.stringify(to) === JSON.stringify(routeRef.current)) return;
+    if (opts?.replace) {
+      history.replaceState({ route: to, prev: cur?.prev ?? null, depth: cur?.depth ?? 0 } satisfies Entry, "");
+    } else {
+      history.pushState({ route: to, prev: routeRef.current, depth: (cur?.depth ?? 0) + 1 } satisfies Entry, "");
+      setPrev(routeRef.current);
+    }
+    setRoute(to);
+  }, [setRoute]);
+  const back = useCallback((fallback: Route) => {
+    if (((history.state as Entry | null)?.depth ?? 0) > 0) history.back();
+    else go(fallback, { replace: true });
+  }, [go]);
+  const openApp = useCallback((pkg: string) => go({ area: "apps", app: pkg }), [go]);
 
   const cancel = useCallback(() => {
     confirm?.resolve(false);
@@ -140,7 +174,7 @@ export default function App() {
   const rev = confirm ? reversal(confirm.action) : null;
 
   return (
-    <Ctx.Provider value={{ serial, route, go, openApp, toast, confirmAction, labelsRev }}>
+    <Ctx.Provider value={{ serial, route, go, back, prev, openApp, toast, confirmAction, labelsRev }}>
       <div className="shell">
         <nav className="rail" aria-label="Navegação principal">
           <div className="brand">
