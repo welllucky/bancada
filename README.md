@@ -18,9 +18,9 @@ Feito com [Tauri 2](https://v2.tauri.app) (backend Rust + WebView nativo do sist
 
 | SO | Para usar | Para desenvolver |
 |---|---|---|
-| Linux | `adb` (`sudo dnf install android-tools` / `sudo apt install adb`) | `webkit2gtk4.1-devel librsvg2-devel libappindicator-gtk3-devel openssl-devel` (Fedora) ou `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev` (Debian/Ubuntu), Rust, Node 20+ |
-| macOS | `brew install android-platform-tools` | Xcode Command Line Tools, Rust, Node 20+ |
-| Windows | [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools) | WebView2 (já vem no Windows 11), Visual Studio Build Tools (C++), Rust, Node 20+ |
+| Linux | `adb` (`sudo dnf install android-tools` / `sudo apt install adb`) | `webkit2gtk4.1-devel librsvg2-devel libappindicator-gtk3-devel openssl-devel` (Fedora) ou `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev` (Debian/Ubuntu), [mise](https://mise.jdx.dev) |
+| macOS | `brew install android-platform-tools` | Xcode Command Line Tools, [mise](https://mise.jdx.dev) |
+| Windows | [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools) | WebView2 (já vem no Windows 11), Visual Studio Build Tools (C++), [mise](https://mise.jdx.dev) |
 
 O app encontra o `adb` em: variável `ADB`, `PATH`, `ANDROID_HOME`/`ANDROID_SDK_ROOT`, `~/Android/Sdk/platform-tools` (Linux), `~/Library/Android/sdk/platform-tools` e Homebrew (macOS), `%LOCALAPPDATA%\Android\Sdk\platform-tools` (Windows).
 
@@ -28,18 +28,21 @@ No celular: **Configurações → Sobre o telefone → Informações de software
 
 ## Rodar em desenvolvimento
 
+As versões de Rust, Node e pnpm ficam fixadas em `mise.toml` (o CI usa o mesmo arquivo):
+
 ```bash
-npm install
-npm run tauri dev
+mise install        # instala rust 1.100.0, node 24.21.0, pnpm 12.8.1
+pnpm install
+pnpm tauri dev
 ```
 
 ## Gerar instaladores
 
 ```bash
-npm run tauri build            # todos os formatos do SO atual
-npm run tauri build -- --bundles deb,rpm,appimage   # Linux
-npm run tauri build -- --bundles dmg               # macOS
-npm run tauri build -- --bundles msi,nsis          # Windows
+pnpm tauri build            # todos os formatos do SO atual
+pnpm tauri build --bundles deb,rpm,appimage   # Linux
+pnpm tauri build --bundles dmg               # macOS
+pnpm tauri build --bundles msi,nsis          # Windows
 ```
 
 Os pacotes saem em `src-tauri/target/release/bundle/`. Para gerar os três sistemas de uma vez, use o workflow `.github/workflows/release.yml` (matriz Ubuntu / macOS arm64 + x64 / Windows com `tauri-apps/tauri-action`): crie uma tag `v*` ou rode manualmente em *Actions*.
