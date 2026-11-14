@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AppIcon } from "../appIcon";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { api } from "../api";
 import { appLabel } from "../appNames";
@@ -103,7 +104,7 @@ export default function HistoricoPage() {
                 onRow={(r) => openApp(r.pkg)}
                 rowLabel={(r) => `Abrir ${appLabel(r.pkg)}`}
                 cols={[
-                  { key: "pkg", label: "App", sort: (r) => appLabel(r.pkg), render: (r) => <span title={r.pkg}>{appLabel(r.pkg)}</span> },
+                  { key: "pkg", label: "App", sort: (r) => appLabel(r.pkg), render: (r) => <span className="app-row" title={r.pkg}><AppIcon pkg={r.pkg} size={24} />{appLabel(r.pkg)}</span> },
                   { key: "mah", label: "mAh", align: "right", sort: (r) => r.mah, render: (r) => <b>{fmtNum(r.mah, 0)}</b> },
                 ]}
               />

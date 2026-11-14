@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { AppIcon } from "../appIcon";
 import { RefreshCw } from "lucide-react";
 import { appLabel } from "../appNames";
 import { useAgo, useDevice } from "../hooks";
@@ -60,8 +61,11 @@ export function AppLink({ pkg, sub }: { pkg: string; sub?: boolean }) {
   const { openApp } = useDevice();
   return (
     <button type="button" className="app-link" onClick={(e) => { e.stopPropagation(); openApp(pkg); }} title={pkg}>
-      <span>{appLabel(pkg)}</span>
-      {sub !== false && <small className="mono">{pkg}</small>}
+      <AppIcon pkg={pkg} size={sub === false ? 20 : 28} />
+      <span className="app-link__text">
+        <span>{appLabel(pkg)}</span>
+        {sub !== false && <small className="mono">{pkg}</small>}
+      </span>
     </button>
   );
 }

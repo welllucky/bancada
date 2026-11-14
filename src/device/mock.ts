@@ -312,4 +312,15 @@ export const mockAdapter: DeviceApi = {
       devices: [{ serial: SERIAL, model: "Galaxy S25 Ultra (demo)", first_seen: end - 40 * 86400, last_seen: end, samples: samples.length }],
     });
   },
+  // A demonstração não tem APKs: a UI mostra a inicial do nome.
+  appIcon: () => wait(null, 40),
+  wifiServices: () =>
+    wait([
+      { name: "adb-DEMO0000-AbCdEf", kind: "pairing" as const, addr: "192.168.0.10:37123" },
+      { name: "adb-DEMO0000-AbCdEf", kind: "connect" as const, addr: "192.168.0.10:41234" },
+    ]),
+  wifiPair: (addr) => wait(`Pareado com ${addr}`, 600),
+  wifiConnect: (addr) => wait(`Conectado a ${addr}`, 400),
+  wifiDisconnect: (addr) => wait(`Desconectado de ${addr}`),
+  wifiFromUsb: () => wait("Conectado a 192.168.0.10:5555", 900),
 };

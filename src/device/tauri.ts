@@ -19,4 +19,10 @@ export const tauriAdapter: DeviceApi = {
   optimizations: (serial) => invoke("optimizations", { serial }),
   apply: (serial, action) => invoke("apply_action", { serial, action }),
   history: (serial, days) => invoke("history", { serial, days }),
+  appIcon: (serial, pkg) => invoke("app_icon", { serial, package: pkg }),
+  wifiServices: () => invoke("wifi_services"),
+  wifiPair: (addr, code) => invoke("wifi_pair", { addr, code }),
+  wifiConnect: (addr) => invoke("wifi_connect", { addr }),
+  wifiDisconnect: (addr) => invoke("wifi_disconnect", { addr }),
+  wifiFromUsb: (serial) => invoke("wifi_from_usb", { serial }),
 };

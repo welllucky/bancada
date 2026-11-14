@@ -365,3 +365,44 @@ pub const WATCHED: &[(&str, &str)] = &[
 pub fn settings_snapshot(serial: &str) -> HashMap<String, Option<String>> {
     WATCHED.iter().map(|(ns, k)| (format!("{ns}.{k}"), setting(serial, ns, k))).collect()
 }
+
+/// Ícone real do app como `data:` URL, extraído do APK; `None` quando não há ícone que saibamos desenhar.
+///
+/// Copia o `base.apk` pelo `adb pull` só na primeira vez, extrai o ícone e apaga a cópia. O resultado fica em
+/// `cache_dir`, numa chave que muda quando o app é atualizado (o caminho do APK muda a cada instalação).
+pub fn app_icon(serial: &str, pkg: &str, cache_dir: &std::path::Path) -> Result<Option<String>> {
+    adb::valid_pkg(pkg)?;
+    let out = sh(serial, &["pm", "path", "--user", "0", pkg]);
+    let Some(remote) = out.lines().filter_map(|l| l.trim().strip_prefix("package:")).find(|p| p.ends_with("/base.apk")).or_else(|| {
+        out.lines().filter_map(|l| l.trim().strip_prefix("package:")).next()
+    }) else {
+        return Ok(None);
+    };
+    adb::valid_apk_path(remote)?;
+    std::fs::create_dir_all(cache_dir).map_err(|e| adb::AdbError(e.to_string()))?;
+    let key = format!("{pkg}.{:016x}", fnv1a(remote.as_bytes()));
+    let cached = cache_dir.join(format!("{key}.icon"));
+    if let Ok(v) = std::fs::read_to_string(&cached) {
+        return Ok((!v.is_empty()).then_some(v));
+    }
+    // Versões antigas do mesmo app saem do cache.
+    if let Ok(rd) = std::fs::read_dir(cache_dir) {
+        for e in rd.flatten() {
+            let n = e.file_name().to_string_lossy().to_string();
+            if n.starts_with(&format!("{pkg}.")) && n.ends_with(".icon") {
+                let _ = std::fs::remove_file(e.path());
+            }
+        }
+    }
+    let tmp = cache_dir.join(format!("{key}.apk.part"));
+    let res = adb::pull_apk(serial, remote, &tmp, Duration::from_secs(300)).map(|_| crate::icons::extract(&tmp));
+    let _ = std::fs::remove_file(&tmp);
+    let icon = res?;
+    let _ = std::fs::write(&cached, icon.as_deref().unwrap_or(""));
+    Ok(icon)
+}
+
+/// Hash estável entre versões do Rust (o `DefaultHasher` não garante isso), para nomes de cache.
+fn fnv1a(b: &[u8]) -> u64 {
+    b.iter().fold(0xcbf29ce484222325, |h, &x| (h ^ x as u64).wrapping_mul(0x100000001b3))
+}

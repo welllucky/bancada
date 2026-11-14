@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Activity, History, House, LayoutGrid, Moon, Smartphone, Sun, Usb } from "lucide-react";
+import { Activity, History, House, LayoutGrid, Moon, Smartphone, Sun, Usb, Wifi } from "lucide-react";
 import { api, Action, Device, isTauri, Recommendation } from "./api";
 import { command, reversal } from "./actions";
 import { Area, Ctx, Route, useAnyStale, useLocal } from "./hooks";
@@ -10,6 +10,7 @@ import DiagnosticoPage from "./pages/Diagnostico";
 import AppsPage from "./pages/Apps";
 import AparelhoPage from "./pages/Aparelho";
 import HistoricoPage from "./pages/Historico";
+import { WifiPanel } from "./wifi";
 
 const NAV: { id: Area; label: string; icon: typeof House }[] = [
   { id: "inicio", label: "Início", icon: House },
@@ -45,6 +46,7 @@ export default function App() {
   const [toasts, setToasts] = useState<{ id: number; msg: string; kind: "ok" | "err" }[]>([]);
   const [confirm, setConfirm] = useState<ConfirmReq | null>(null);
   const [busy, setBusy] = useState(false);
+  const [wifiOpen, setWifiOpen] = useState(false);
   const [problemCount, setProblemCount] = useState<number | null>(null);
   const tid = useRef(0);
   const refreshing = useAnyStale();
@@ -171,14 +173,24 @@ export default function App() {
             ) : (
               <strong>{current ? current.model || current.serial : pending ? "Aguardando autorização" : "Nenhum aparelho"}</strong>
             )}
-            {current && <span className="muted small row gap-xs"><Usb size={13} aria-hidden /> {current.transport || "conectado"}</span>}
+            {current && (
+              <span className="muted small row gap-xs">
+                {current.transport === "wifi" ? <Wifi size={13} aria-hidden /> : <Usb size={13} aria-hidden />}
+                {current.transport === "wifi" ? "Wi-Fi" : current.transport === "usb" ? "USB" : "conectado"}
+              </span>
+            )}
             {api.source === "mock" && <LuckBadge tone="company">dados de demonstração</LuckBadge>}
+            <span className="topbar-end">
+              <LuckButton variant="ghost" size="sm" iconLeft={<Wifi size={14} />} onClick={() => setWifiOpen(true)}>Conectar por Wi-Fi</LuckButton>
+            </span>
           </header>
 
           {serial ? (
             <div className={refreshing ? "is-stale" : undefined}><Active key={`${serial}-${route.area}`} /></div>
           ) : (
-            <ConnectScreen polled={polled} adbError={adbError} found={devices.length > 0} pending={!!pending} />
+            <ConnectScreen polled={polled} adbError={adbError} found={devices.length > 0} pending={!!pending}>
+              {polled && !adbError && <WifiPanel devices={devices} toast={toast} />}
+            </ConnectScreen>
           )}
         </main>
       </div>
@@ -198,6 +210,11 @@ export default function App() {
         )}
       </LuckDialog>
 
+      <LuckDialog open={wifiOpen} heading="Conectar por Wi-Fi" description="Use o Phone Deck sem o cabo, com o celular e o computador na mesma rede." onClose={() => setWifiOpen(false)}>
+        {wifiOpen && <WifiPanel devices={devices} usbSerial={current?.transport === "usb" ? current.serial : null} toast={toast} />}
+        <div className="row end"><LuckButton variant="ghost" onClick={() => setWifiOpen(false)}>Fechar</LuckButton></div>
+      </LuckDialog>
+
       <div className="toasts" role="status" aria-live="polite">
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.kind}`}>{t.msg}</div>
@@ -208,7 +225,7 @@ export default function App() {
 }
 
 /** Conexão em 3 passos com o estado real de cada um. */
-function ConnectScreen({ polled, adbError, found, pending }: { polled: boolean; adbError: string | null; found: boolean; pending: boolean }) {
+function ConnectScreen({ polled, adbError, found, pending, children }: { polled: boolean; adbError: string | null; found: boolean; pending: boolean; children?: React.ReactNode }) {
   const noIpc = !isTauri() && api.source !== "mock";
   const adbOk = polled && !adbError;
   const s1 = !polled ? "current" : adbOk ? "done" : "error";
@@ -249,6 +266,11 @@ function ConnectScreen({ polled, adbError, found, pending }: { polled: boolean; 
           </Step>
         </Steps>
       </LuckCard>
+      {children && (
+        <LuckCard heading="Sem cabo" hint="Android 11 ou mais novo" padded style={{ width: "min(560px, 100%)" }}>
+          {children}
+        </LuckCard>
+      )}
     </div>
   );
 }

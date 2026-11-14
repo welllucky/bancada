@@ -16,6 +16,9 @@ use wait_timeout::ChildExt;
 pub static PKG_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$").unwrap());
 static BAD: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"[;&|`$<>\\\n'"()*?{}\[\]~#!]"#).unwrap());
+/// Caminho de APK no aparelho, como `pm path` devolve (`/data/app/~~abc==/com.x-def==/base.apk`).
+static APK_PATH_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^/(data|system|system_ext|product|vendor|apex)/[A-Za-z0-9._~=+/\-]+\.apk$").unwrap());
 static SERIAL_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[A-Za-z0-9._:\-]{1,64}$").unwrap());
 
 #[derive(Debug)]
@@ -129,6 +132,21 @@ pub fn shell(serial: &str, tokens: &[&str], timeout: Duration) -> Result<String>
     run(&args, Some(serial), timeout)
 }
 
+pub fn valid_apk_path(p: &str) -> Result<&str> {
+    if APK_PATH_RE.is_match(p) && !p.contains("..") {
+        Ok(p)
+    } else {
+        Err(AdbError(format!("caminho de APK inválido: {p:?}")))
+    }
+}
+
+/// `adb pull` de um APK (só leitura no aparelho). O caminho remoto vem de `pm path` e é validado.
+pub fn pull_apk(serial: &str, remote: &str, local: &std::path::Path, timeout: Duration) -> Result<()> {
+    valid_apk_path(remote)?;
+    let local = local.to_str().ok_or_else(|| AdbError("caminho local inválido".into()))?;
+    run(&["pull", remote, local], Some(serial), timeout).map(|_| ())
+}
+
 pub fn valid_pkg(pkg: &str) -> Result<&str> {
     if PKG_RE.is_match(pkg) {
         Ok(pkg)
@@ -158,7 +176,13 @@ pub fn parse_devices(out: &str) -> Vec<Device> {
                 serial: parts[0].into(),
                 state: parts[1].into(),
                 model: find("model:").replace('_', "-"),
-                transport: find("usb:"),
+                transport: if !find("usb:").is_empty() {
+                    "usb".into()
+                } else if parts[0].contains(':') || parts[0].contains("_adb-tls-connect") {
+                    "wifi".into()
+                } else {
+                    String::new()
+                },
             })
         })
         .collect()
@@ -189,10 +213,24 @@ mod tests {
     }
 
     #[test]
+    fn apk_path_validation() {
+        assert!(valid_apk_path("/data/app/~~Ab1-_==/com.whatsapp-Xy9==/base.apk").is_ok());
+        assert!(valid_apk_path("/system/priv-app/Foo/Foo.apk").is_ok());
+        assert!(valid_apk_path("/data/app/../../etc/passwd.apk").is_err());
+        assert!(valid_apk_path("/sdcard/x.apk").is_err());
+        assert!(valid_apk_path("/data/app/x.apk;reboot").is_err());
+        assert!(valid_apk_path("/data/app/a b/base.apk").is_err());
+    }
+
+    #[test]
     fn devices_parse() {
         let d = parse_devices("List of devices attached\nSERIAL0001             device usb:3-2 product:pa3qxxx model:SM_S938B device:pa3q transport_id:1\nABC unauthorized usb:1-1 transport_id:2\n\n");
         assert_eq!(d.len(), 2);
         assert_eq!(d[0].model, "SM-S938B");
         assert_eq!(d[1].state, "unauthorized");
+        assert_eq!(d[0].transport, "usb");
+        let w = parse_devices("List of devices attached\n192.168.0.10:5555 device product:x model:SM_S938B device:pa3q transport_id:3\nadb-SERIAL0001-AbCdEf._adb-tls-connect._tcp device model:SM_S938B transport_id:4\n");
+        assert_eq!(w[0].transport, "wifi");
+        assert_eq!(w[1].transport, "wifi");
     }
 }
