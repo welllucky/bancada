@@ -3,7 +3,8 @@ name: release
 # Cada push na main calcula a próxima versão pelos Conventional Commits (scripts/release-version.mjs).
 # Se houver feat/fix/perf/breaking desde a última tag: testa, cria a tag vX.Y.Z, compila para Linux, macOS
 # (arm64 e x64) e Windows, publica a release com as notas e o latest.json do atualizador.
-# Nenhum commit é criado: a versão é gravada só na cópia de trabalho do build.
+# Depois de publicar, a versão volta para a main num commit `chore(release): X.Y.Z` feito pela API do GitHub
+# (assinado pelo GitHub; com o GITHUB_TOKEN não dispara outro workflow, e `chore` não gera versão).
 #
 # Configuração no repositório (Settings › Secrets and variables › Actions):
 #   vars.RELEASE_REPO       opcional, `dono/repo` público onde publicar (padrão: este repositório)
@@ -186,3 +187,28 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.version.outputs.tag }}
         run: gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+      - name: Versão de volta na main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          files=(package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/core/Cargo.toml src-tauri/Cargo.lock)
+          for try in 1 2 3; do
+            git fetch -q --depth 1 origin main && git reset -q --hard origin/main
+            node scripts/release-version.mjs --set "$VERSION"
+            if git diff --quiet; then echo "A main já está em $VERSION."; exit 0; fi
+            additions=$(for f in "${files[@]}"; do jq -n --arg p "$f" --arg c "$(base64 -w0 "$f")" '{path: $p, contents: $c}'; done | jq -s .)
+            jq -n --arg repo "$GITHUB_REPOSITORY" --arg head "$(git rev-parse HEAD)" --arg msg "chore(release): $VERSION" --argjson add "$additions" '{
+              query: "mutation($i: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $i) { commit { oid } } }",
+              variables: { i: { branch: { repositoryNameWithOwner: $repo, branchName: "main" }, expectedHeadOid: $head,
+                message: { headline: $msg }, fileChanges: { additions: $add } } }
+            }' > body.json
+            # Falha se a main andou entre o fetch e o commit; aí tenta de novo sobre a nova ponta.
+            if gh api graphql --input body.json -q .data.createCommitOnBranch.commit.oid; then exit 0; fi
+            sleep 5
+          done
+          echo "::warning::Não foi possível gravar a versão $VERSION na main."

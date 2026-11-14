@@ -2,13 +2,13 @@
 // Próxima versão a partir dos Conventional Commits desde a última tag `v*`, sem dependências.
 //
 //   node scripts/release-version.mjs            → imprime a análise
-//   node scripts/release-version.mjs --apply    → também grava a versão em package.json, tauri.conf.json e Cargo.toml
+//   node scripts/release-version.mjs --apply    → também grava a versão em package.json, tauri.conf.json, Cargo.toml e Cargo.lock
 //   node scripts/release-version.mjs --set 1.2.3 → só grava a versão dada nos manifestos (usado no build)
 //
 // Regras: `feat` → minor, `fix`/`perf` → patch, `!` ou `BREAKING CHANGE` → major (minor enquanto a versão for 0.x).
 // Outros tipos (docs, chore, ci, refactor, test, style, build) não geram versão.
 // No GitHub Actions escreve `release`, `version`, `tag` em $GITHUB_OUTPUT e as notas em release-notes.md.
-// A versão não volta para o repositório como commit: ela vem da tag, e os commits na main seguem só os assinados.
+// Depois de publicar, o workflow devolve a versão para a main num commit `chore(release)` (não gera release).
 
 import { execFileSync } from "node:child_process";
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
@@ -26,7 +26,14 @@ const writeVersion = (version) => {
     const t = readFileSync(p, "utf8").replace(/(\[package\][^[]*?\nversion = )"[^"]*"/, `$1"${version}"`);
     writeFileSync(p, t);
   }
-  console.log(`Versão ${version} gravada nos manifestos (só nesta cópia de trabalho).`);
+  // E no Cargo.lock, senão o primeiro `cargo build` depois do pull deixa a árvore suja.
+  const lock = "src-tauri/Cargo.lock";
+  let l = readFileSync(lock, "utf8");
+  for (const name of ["phone-deck", "phone-deck-core"]) {
+    l = l.replace(new RegExp(`(\\nname = "${name}"\\nversion = )"[^"]*"`), `$1"${version}"`);
+  }
+  writeFileSync(lock, l);
+  console.log(`Versão ${version} gravada nos manifestos.`);
 };
 
 const set = process.argv.indexOf("--set");
