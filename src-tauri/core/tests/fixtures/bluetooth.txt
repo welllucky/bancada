@@ -1,0 +1,68 @@
+Bluetooth Status:
+  State:         ON
+  Address:       XX:XX:XX:XX:00:00
+  Name:          S25 Ultra de Usuario
+  Inner app:     com.android.bluetooth
+  Uptime:        20m 18.457582s
+
+Enable log:
+  TIMESTAMP          ACTION     REASON               PACKAGE
+  ------------------ ---------- -------------------- -------
+  11-13 23:56:31.716 Enable     SYSTEM_BOOT          android
+
+Bluetooth crashed 0 times
+
+Ble app registered: {android/NearbyService, android/AutoHotspot, com.samsung.android.mcfserver, com.samsung.android.mcfds, com.samsung.android.oneconnect, com.samsung.android.oneconnect, com.samsung.android.beaconmanager, com.samsung.android.mdx.kit}
+
+BluetoothManagerService:
+  mEnable:true
+  mQuietEnable:false
+  mEnableExternal:true
+  mQuietEnableExternal:false
+
+BluetoothCast
+  BLUETOOTH_CAST_MODE : false
+  BLUETOOTH_CAST_RANGE : Contact Only
+  BLUETOOTH_CAST_PERMISSION : Every time ask
+  BLUETOOTH_CAST_TIMEOUT : 10 minutes
+  BLUETOOTH_CAST_DISALLOWED_DEVICES : 
+
+  AudioCastManager
+    Role: 0(false)
+    Cast Device: null
+    Path: 0
+    AudioSharingEnabled: false
+  CommandSender
+    Recording: false, AudioSocket: false
+    Reason: null
+  MediaVolumeManager
+    Vol: -1(false)
+
+BluetoothAdapterProperties
+  Name: S25 Ultra de Usuario
+  Address: XX:XX:XX:XX:00:00
+  ConnectionState: STATE_DISCONNECTED
+  MaxConnectedAudioDevices: 2
+  A2dpOffloadEnabled: true
+  Discovering: false
+  DiscoveryEndMs: 0
+  SarType: NONE
+  SarStatus: OFF
+
+BluetoothRemoteDevices
+  Bonded devices: 2
+    XX:XX:XX:XX:00:00(Public ) => XX:XX:XX:XX:00:00(Public ) [BR/EDR] [0x240404] [Pairing Algorithm BR/EDR: 2 LE: N/A] [ACL BR/EDR:N LE:N] [ Encryption status(BR/EDR): N/A LE: N/A] Buds3 FE de Usuario
+        [BR/EDR UUIDs]: SPP AudioSink Avrcp Handsfree 2e73a4ad-332d-41fc-90e2-16bef06523f2 81c2e72a-0591-443e-a1ff-05f988593351 a23d00bc-217c-123b-9c00-fc44577136ee b4a9d6a0-b2e3-4e40-976d-a69f167ea895 d908aab5-7a90-4cbe-8641-86a553db015b e7ab2241-ca64-4a69-ac02-05f5c6fe2d62 SMEP f8d1fbe4-7966-4334-8024-ff96c9330e15
+    XX:XX:XX:XX:00:00(Public ) => XX:XX:XX:XX:00:00(Public ) [ DUAL ] [0x000704] [Pairing Algorithm BR/EDR: 3 LE: 0] [ACL BR/EDR:N LE:N] [ Encryption status(BR/EDR): N/A LE: N/A] Galaxy Watch8 (DD3K)
+        [BR/EDR UUIDs]: AudioSource Avrcp HSP_AG Handsfree Handsfree_AG 0000ae00-ebae-4526-9511-8357c35d7be2 5e8945b0-9525-11e3-a5e2-0800200c9a66
+        [Packages    ]: [com.google.android.gms]
+
+  Devices in DB:
+  Bonded devices: 2
+    XX:XX:XX:XX:00:00(Public ) => XX:XX:XX:XX:00:00(Public ) [BR/EDR] [0x240404] [Pairing Algorithm BR/EDR: 2 LE: N/A] [ACL BR/EDR:N LE:N] [ Encryption status(BR/EDR): N/A LE: N/A] Buds3 FE de Usuario
+        [BR/EDR UUIDs]: SPP AudioSink Avrcp Handsfree 2e73a4ad-332d-41fc-90e2-16bef06523f2 81c2e72a-0591-443e-a1ff-05f988593351 a23d00bc-217c-123b-9c00-fc44577136ee b4a9d6a0-b2e3-4e40-976d-a69f167ea895 d908aab5-7a90-4cbe-8641-86a553db015b e7ab2241-ca64-4a69-ac02-05f5c6fe2d62 SMEP f8d1fbe4-7966-4334-8024-ff96c9330e15
+    XX:XX:XX:XX:00:00(Public ) => XX:XX:XX:XX:00:00(Public ) [ DUAL ] [0x000704] [Pairing Algorithm BR/EDR: 3 LE: 0] [ACL BR/EDR:N LE:N] [ Encryption status(BR/EDR): N/A LE: N/A] Galaxy Watch8 (DD3K)
+        [BR/EDR UUIDs]: AudioSource Avrcp HSP_AG Handsfree Handsfree_AG 0000ae00-ebae-4526-9511-8357c35d7be2 5e8945b0-9525-11e3-a5e2-0800200c9a66
+        [Packages    ]: [com.google.android.gms]
+
+  Devices in DB:
