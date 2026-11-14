@@ -213,7 +213,7 @@ pub fn app_detail(serial: &str, pkg: &str) -> Result<Value> {
     granted.sort();
     granted.dedup();
     let ops = sh(serial, &["cmd", "appops", "get", pkg]);
-    let bg = regex::Regex::new(r"RUN_ANY_IN_BACKGROUND: (\w+)").unwrap().captures(&ops).map(|c| c[1].to_string());
+    let bg = parse::parse_bg_mode(&ops);
     let recent: Vec<Value> = regex::Regex::new(r"(?m)^(\w+): (?:allow|foreground); time=\+(\S+) ago")
         .unwrap()
         .captures_iter(&ops)
@@ -234,6 +234,15 @@ pub fn app_detail(serial: &str, pkg: &str) -> Result<Value> {
         "run_in_background": bg.unwrap_or_else(|| "allow".into()),
         "recent_ops": recent,
     }))
+}
+
+/// Quais destes apps já estão com o segundo plano restrito agora.
+pub fn background_restricted(serial: &str, pkgs: &[String]) -> std::collections::HashSet<String> {
+    pkgs.iter()
+        .filter(|p| adb::valid_pkg(p).is_ok())
+        .filter(|p| parse::parse_bg_mode(&sh(serial, &["cmd", "appops", "get", p.as_str(), "RUN_ANY_IN_BACKGROUND"])).as_deref() == Some("ignore"))
+        .cloned()
+        .collect()
 }
 
 // ---- network / bluetooth

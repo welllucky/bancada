@@ -48,25 +48,24 @@ function Problemas() {
   const recs = useLoad(api.optimizations);
   const groups = useMemo(() => {
     const m = new Map<RecGroup, Recommendation[]>();
-    for (const r of recs.data ?? []) m.set(groupOf(r), [...(m.get(groupOf(r)) ?? []), r]);
+    for (const r of recs.data ?? []) if (!r.resolved) m.set(groupOf(r), [...(m.get(groupOf(r)) ?? []), r]);
     return m;
   }, [recs.data]);
 
   const apply = async (r: Recommendation) => {
     if (!r.action) return;
-    const ok = await confirmAction({ title: r.action_label ?? r.title, body: r.detail, action: r.action, danger: isDanger(r.action) });
-    if (ok) recs.reload();
+    await confirmAction({ title: r.action_label ?? r.title, body: r.detail, action: r.action, danger: isDanger(r.action) });
   };
 
   const issue = (r: Recommendation) => {
     const pkg = recPackage(r);
-    const tone = toneOf(r.severity);
+    const tone = r.resolved ? "success" : toneOf(r.severity);
     return (
       <Issue
         key={r.id}
         tone={tone}
         title={recTitle(r, appLabel)}
-        badge={<LuckBadge tone={tone === "danger" ? "danger" : tone === "warning" ? "warning" : "neutral"}>{SEV_LABEL[r.severity]}</LuckBadge>}
+        badge={r.resolved ? <LuckBadge tone="success">corrigido</LuckBadge> : <LuckBadge tone={tone === "danger" ? "danger" : tone === "warning" ? "warning" : "neutral"}>{SEV_LABEL[r.severity]}</LuckBadge>}
         detail={r.detail}
         evidence={r.evidence}
         actions={
@@ -86,11 +85,13 @@ function Problemas() {
   if (recs.error) return <ErrorNote error={recs.error} title="Não foi possível analisar o aparelho" />;
   if (!recs.data) return <Loading label="Analisando bateria, processos e configurações…" />;
   const maint = groups.get("manutencao") ?? [];
+  const resolved = recs.data.filter((r) => r.resolved);
+  const open = recs.data.length - resolved.length;
 
   return (
     <>
       <div className="row between">
-        <span className="muted small">{recs.data.length} itens, do mais grave para o mais leve</span>
+        <span className="muted small">{open} itens, do mais grave para o mais leve</span>
         <Refresh onClick={recs.reload} loading={recs.loading} at={recs.at} />
       </div>
       {ORDER.filter((g) => groups.get(g)?.length).map((g) => (
@@ -98,6 +99,11 @@ function Problemas() {
           <div>{groups.get(g)!.map(issue)}</div>
         </LuckCard>
       ))}
+      {resolved.length > 0 && (
+        <LuckCard heading="Já corrigido" index={String(resolved.length)} hint="some sozinho com o tempo" padded={false}>
+          <div>{resolved.map(issue)}</div>
+        </LuckCard>
+      )}
       <LuckCard heading={GROUP_LABEL.manutencao} hint="sempre disponível" padded={false}>
         {maint.length > 0 && <div>{maint.map(issue)}</div>}
         <div className="pad row gap-sm wrap">
@@ -242,7 +248,7 @@ function Agora() {
       body: "O app é encerrado agora. Ele pode voltar a rodar quando receber uma notificação ou quando você abri-lo.",
       action: { kind: "force_stop", package: pkg },
       danger: true,
-    }).then((ok) => { if (ok) procs.reload(); });
+    });
   };
 
   return (

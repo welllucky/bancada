@@ -167,7 +167,7 @@ function Rede() {
       title: `${on ? "Desativar" : "Ativar"} ${label.toLowerCase()}`,
       body: "Essas buscas deixam a localização mais precisa com o rádio desligado, ao custo de bateria.",
       action: { kind: "set_setting", namespace: "global", key, value: on ? "0" : "1" },
-    }).then((ok) => { if (ok) net.reload(); });
+    });
 
   return (
     <>

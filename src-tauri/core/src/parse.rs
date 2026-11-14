@@ -764,3 +764,28 @@ pub fn cpu_by_name(rows: &[LiveProc]) -> HashMap<String, f64> {
     }
     m
 }
+
+/// Modo do `RUN_ANY_IN_BACKGROUND` do pacote na saída de `cmd appops get <pkg>`. Prefere a linha do pacote
+/// à de "Uid mode", que vale para o UID inteiro e pode divergir do que foi aplicado ao pacote.
+pub fn parse_bg_mode(ops: &str) -> Option<String> {
+    let mode = |l: &str| {
+        l.trim().strip_prefix("RUN_ANY_IN_BACKGROUND: ").map(|r| r.split(|c: char| c == ';' || c.is_whitespace()).next().unwrap_or("").to_string())
+    };
+    ops.lines()
+        .filter(|l| !l.contains("Uid mode"))
+        .find_map(mode)
+        .or_else(|| ops.lines().find_map(|l| l.split_once("Uid mode:").and_then(|(_, r)| mode(r))))
+}
+
+#[cfg(test)]
+mod bg_tests {
+    use super::*;
+
+    #[test]
+    fn bg_mode() {
+        let ops = "Uid mode: RUN_ANY_IN_BACKGROUND: allow\nWAKE_LOCK: allow; time=+1m ago\nRUN_ANY_IN_BACKGROUND: ignore; time=+2s ago\n";
+        assert_eq!(parse_bg_mode(ops).as_deref(), Some("ignore"));
+        assert_eq!(parse_bg_mode("Uid mode: RUN_ANY_IN_BACKGROUND: ignore\n").as_deref(), Some("ignore"));
+        assert_eq!(parse_bg_mode("WAKE_LOCK: allow\n"), None);
+    }
+}

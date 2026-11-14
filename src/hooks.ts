@@ -36,6 +36,13 @@ export const useDevice = () => useContext(Ctx);
 /** Último resultado de cada leitura, por aparelho + função + dependências. Vive enquanto o app está aberto. */
 const cache = new Map<string, { data: unknown; at: number }>();
 
+/** Recarregadores das leituras na tela, para atualizar tudo depois de uma ação no aparelho. */
+const reloaders = new Set<() => void>();
+/** Atualiza todas as leituras visíveis (mantendo o dado atual esmaecido até chegar o novo). */
+export function reloadAll() {
+  reloaders.forEach((f) => f());
+}
+
 /** Leituras que estão mostrando dado antigo enquanto buscam o novo (para esmaecer a área). */
 const staleKeys = new Set<string>();
 const staleSubs = new Set<() => void>();
@@ -106,7 +113,14 @@ export function useLoad<T>(fn: ((serial: string) => Promise<T>) | null, deps: un
     if (key && c) setStale(key, true);
     reload();
     const id = interval ? setInterval(reload, interval) : undefined;
+    const again = () => {
+      if (key) setStale(key, true);
+      setStaleState(true);
+      reload();
+    };
+    reloaders.add(again);
     return () => {
+      reloaders.delete(again);
       if (id) clearInterval(id);
       if (key) setStale(key, false);
     };

@@ -16,6 +16,21 @@ const wave = (i: number, period: number, amp: number) => Math.sin((i / period) *
 
 const applied: { ts: number; serial: string; action: string; ok: boolean; output: string }[] = [];
 
+/** Estado de demonstração: o que já foi aplicado muda o que as leituras devolvem, como no aparelho. */
+const demo = { restricted: new Set<string>(), stopped: new Set<string>(), settings: new Set<string>() };
+
+function demoRecs(): Recommendation[] {
+  return RECS.flatMap((r): Recommendation[] => {
+    const a = r.action;
+    if (a?.kind === "force_stop" && demo.stopped.has(a.package)) return [];
+    if (a?.kind === "set_setting" && demo.settings.has(a.key)) return [];
+    if (a?.kind === "set_background" && a.mode === "ignore" && demo.restricted.has(a.package)) {
+      return [{ ...r, severity: "info", resolved: true, action: undefined, action_label: undefined, detail: "O segundo plano deste app já está restrito. O número abaixo é acumulado desde a última carga completa e zera na próxima." }];
+    }
+    return [r];
+  }).sort((x, y) => Number(!!x.resolved) - Number(!!y.resolved));
+}
+
 const RECS: Recommendation[] = [
   {
     id: "cpu-asleep-com.whatsapp",
@@ -235,7 +250,7 @@ export const mockAdapter: DeviceApi = {
       target_sdk: "36",
       granted_sensitive: pkg === "com.whatsapp" ? ["RECORD_AUDIO", "CAMERA", "READ_CONTACTS", "ACCESS_FINE_LOCATION", "POST_NOTIFICATIONS"] : ["POST_NOTIFICATIONS"],
       bucket: a?.bucket,
-      run_in_background: "allow",
+      run_in_background: demo.restricted.has(pkg) ? "ignore" : "allow",
       recent_ops: pkg === "com.whatsapp" ? [{ op: "RECORD_AUDIO", ago: "2h4m12s310ms" }, { op: "CAMERA", ago: "1d2h7m3s5ms" }, { op: "WAKE_LOCK", ago: "34s30ms" }, { op: "FINE_LOCATION", ago: "3d0h54m53s831ms" }] : [],
     });
   },
@@ -303,9 +318,12 @@ export const mockAdapter: DeviceApi = {
         { package: "com.example.restored", installer: "com.samsung.android.scloud" },
       ],
     }),
-  optimizations: () => wait(RECS, 600),
+  optimizations: () => wait(demoRecs(), 600),
   apply: (serial, action: Action) => {
     applied.unshift({ ts: now(), serial, action: logLabel(action), ok: true, output: "Success" });
+    if (action.kind === "set_background") action.mode === "ignore" ? demo.restricted.add(action.package) : demo.restricted.delete(action.package);
+    if (action.kind === "force_stop") demo.stopped.add(action.package);
+    if (action.kind === "set_setting") demo.settings.add(action.key);
     return wait("Success (demo: nada foi enviado a um aparelho)", 400);
   },
   history: (serial, days) => {

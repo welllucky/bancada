@@ -156,6 +156,8 @@ export interface Recommendation {
   evidence: string;
   action?: Action;
   action_label?: string;
+  /** A correção já está aplicada; a evidência é histórica e some sozinha (ex.: na próxima carga). */
+  resolved?: boolean;
 }
 
 export interface HistoryData {

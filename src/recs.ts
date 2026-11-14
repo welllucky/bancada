@@ -31,8 +31,8 @@ export function recPackage(r: Recommendation): string | undefined {
   return actionPackage(r.action) ?? (r.id.startsWith("cpu-asleep-") ? r.id.slice("cpu-asleep-".length) : undefined);
 }
 
-/** Recomendações que pedem atenção (sugestões ficam fora da contagem do veredito). */
-export const problems = (rs: Recommendation[]) => rs.filter((r) => r.severity !== "info");
+/** Recomendações que pedem atenção (sugestões e o que já foi corrigido ficam fora da contagem do veredito). */
+export const problems = (rs: Recommendation[]) => rs.filter((r) => r.severity !== "info" && !r.resolved);
 
 /** Título com o nome amigável do app no lugar do pacote. */
 export function recTitle(r: Recommendation, label: (pkg: string) => string): string {
