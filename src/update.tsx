@@ -89,6 +89,15 @@ export function UpdateControl() {
   );
 }
 
+/** Número da versão instalada, no pé da barra lateral. Não usa rede. */
+export function AppVersion() {
+  const [v, setV] = useState<string | null>(null);
+  useEffect(() => {
+    api.appVersion().then(setV).catch(() => {});
+  }, []);
+  return v ? <span className="rail-version" title={`Phone Deck ${v}`}>v{v}</span> : null;
+}
+
 /** Notas da release (Markdown simples gerado pelo pipeline: `### Seção` e `- item — hash`). */
 function Notes({ text }: { text: string }) {
   const blocks: { title: string; items: string[] }[] = [];

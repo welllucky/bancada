@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, History, House, LayoutGrid, Moon, Smartphone, Sun, Usb, Wifi } from "lucide-react";
 import { api, Action, Device, isTauri, Recommendation } from "./api";
 import { learnLabels, onLabels } from "./appNames";
-import { UpdateControl } from "./update";
+import { AppVersion, UpdateControl } from "./update";
 import { command, reversal } from "./actions";
 import { Area, Ctx, reloadAll, Route, useAnyStale, useLocal } from "./hooks";
 import { LuckBadge, LuckButton, LuckCard, LuckDialog, Step, Steps } from "./luck";
@@ -203,6 +203,7 @@ export default function App() {
             <LuckButton variant="ghost" size="sm" fullWidth iconLeft={theme === "dark" ? <Sun size={16} /> : <Moon size={16} />} onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
               <span className="nav-label">Tema {theme === "dark" ? "claro" : "escuro"}</span>
             </LuckButton>
+            <AppVersion />
           </div>
         </nav>
 
