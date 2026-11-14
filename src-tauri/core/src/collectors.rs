@@ -406,3 +406,54 @@ pub fn app_icon(serial: &str, pkg: &str, cache_dir: &std::path::Path) -> Result<
 fn fnv1a(b: &[u8]) -> u64 {
     b.iter().fold(0xcbf29ce484222325, |h, &x| (h ^ x as u64).wrapping_mul(0x100000001b3))
 }
+
+// ---- rede
+
+static NETSTATS: LazyLock<Cache<crate::netusage::NetStats>> = LazyLock::new(|| Cache::new(Duration::from_secs(60)));
+
+/// Consumo de rede dos últimos `days` dias: linha do tempo do aparelho e total por app.
+/// `dumpsys netstats detail` é grande; fica em cache por 60 s.
+pub fn net_usage(serial: &str, days: f64, refresh: bool) -> Value {
+    use crate::netusage::*;
+    let ns = NETSTATS.get_or(serial, refresh, || parse_netstats(&sh_long(serial, &["dumpsys", "netstats", "detail"])));
+    let since = (now_s() - days * 86400.0) as i64;
+    let map = uid_map(serial);
+    let apps: Vec<Value> = per_uid(&ns, since)
+        .into_iter()
+        .map(|a| {
+            let who = uid_ref(&map, &a.uid.to_string());
+            json!({"uid": a.uid, "packages": who.packages, "label": who.label, "rx": a.rx, "tx": a.tx, "wifi": a.wifi, "mobile": a.mobile, "foreground": a.foreground})
+        })
+        .collect();
+    let tl = timeline(&ns, since);
+    let (rx, tx) = tl.iter().fold((0u64, 0u64), |(r, t), p| (r + p.rx, t + p.tx));
+    json!({"timeline": tl, "apps": apps, "rx": rx, "tx": tx, "available": !ns.xt.is_empty() || !ns.uids.is_empty()})
+}
+
+/// Conexões abertas agora, com o app dono de cada uma (`/proc/net/*` traz o UID).
+pub fn net_connections(serial: &str) -> Value {
+    use crate::netusage::parse_proc_net;
+    let map = uid_map(serial);
+    let mut readable = false;
+    let mut out: Vec<Value> = Vec::new();
+    for (file, proto) in [("/proc/net/tcp", "tcp"), ("/proc/net/tcp6", "tcp6"), ("/proc/net/udp", "udp"), ("/proc/net/udp6", "udp6")] {
+        let text = sh(serial, &["cat", file]);
+        if text.contains("local_address") {
+            readable = true;
+        }
+        for s in parse_proc_net(&text, proto) {
+            let who = uid_ref(&map, &s.uid.to_string());
+            out.push(json!({
+                "proto": s.proto, "local": s.local, "local_port": s.local_port, "remote": s.remote, "remote_port": s.remote_port,
+                "state": s.state, "uid": s.uid, "packages": who.packages, "label": who.label,
+            }));
+        }
+    }
+    json!({"readable": readable, "sockets": out})
+}
+
+/// Contadores das interfaces agora; a UI calcula a taxa pela diferença entre leituras.
+pub fn net_live(serial: &str) -> Value {
+    let ifaces = crate::netusage::parse_proc_net_dev(&sh(serial, &["cat", "/proc/net/dev"]));
+    json!({"t": (now_s() * 1000.0) as i64, "ifaces": ifaces})
+}

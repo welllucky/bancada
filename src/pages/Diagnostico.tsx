@@ -9,8 +9,9 @@ import { useDevice, useLoad } from "../hooks";
 import { DataTable, ErrorNote, Issue, Loading, LuckBadge, LuckButton, LuckCard, LuckIconButton, LuckMeter, LuckStat, Segmented } from "../luck";
 import { GROUP_LABEL, groupOf, recPackage, RecGroup, recTitle, SEV_LABEL, toneOf } from "../recs";
 import { AppLink, PageHead, Refresh, Stop, Tabs, useTab } from "./common";
+import { Rede } from "./Rede";
 
-const TABS = ["problemas", "bateria", "agora", "memoria"] as const;
+const TABS = ["problemas", "bateria", "agora", "memoria", "rede"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function DiagnosticoPage() {
@@ -27,12 +28,14 @@ export default function DiagnosticoPage() {
           { value: "bateria", label: "Bateria" },
           { value: "agora", label: "Agora" },
           { value: "memoria", label: "Memória" },
+          { value: "rede", label: "Rede" },
         ]}
       />
       {tab === "problemas" && <Problemas />}
       {tab === "bateria" && <Bateria />}
       {tab === "agora" && <Agora />}
       {tab === "memoria" && <Memoria />}
+      {tab === "rede" && <Rede />}
     </div>
   );
 }

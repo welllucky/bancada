@@ -11,6 +11,7 @@ Visão de produto e instruções de uso para humanos: `README.md`. Este arquivo 
 - `src-tauri/src/main.rs` — workarounds de ambiente Linux antes de qualquer thread (ver _Armadilhas Linux_).
 - `src-tauri/core/src/icons.rs` — ícone real do app a partir do APK (manifesto + `resources.arsc` via `apk-info`): ícone adaptativo composto em SVG, senão o bitmap mais denso; cache em `app_cache_dir()/icons`, chave pelo caminho do APK (muda a cada atualização). Conferência visual: `cargo run -p phone-deck-core --example icon -- saida.html *.apk`.
 - `src-tauri/core/src/wireless.rs` — depuração por Wi-Fi: mDNS, pareamento por código, conexão, `tcpip` a partir do cabo.
+- `src-tauri/core/src/netusage.rs` — rede: `dumpsys netstats detail` (consumo por período e por UID), `/proc/net/{tcp,udp}{,6}` (conexões com o UID dono) e `/proc/net/dev` (contadores; a UI calcula a taxa pela diferença). Formatos ainda sem fixture real do aparelho.
 - `src/api.ts` — única ponte TS→Rust (`invoke`), espelha os tipos Rust; `src/pages/*` — uma página por seção; `src/ui.tsx` — componentes compartilhados; gráficos são SVG à mão.
 
 Fluxo: página → `api.x()` → comando Tauri → `spawn_blocking` → `collectors::x` → `adb::shell` → `parse::x` → JSON → página.

@@ -7,6 +7,7 @@ import { Bars } from "../charts";
 import { fmtNum } from "../format";
 import { fmtAgo, permLabel } from "../permissions";
 import { useDevice, useLoad } from "../hooks";
+import { AppNetCard } from "./Rede";
 import { DataTable, ErrorNote, Loading, LuckBadge, LuckButton, LuckCard, Segmented, Tone } from "../luck";
 import { KV, PageHead, Refresh } from "./common";
 
@@ -231,6 +232,8 @@ function AppDetailPage({ pkg }: { pkg: string }) {
               ]} />
             </LuckCard>
           </div>
+
+          <AppNetCard pkg={pkg} />
 
           <LuckCard heading="Zona de risco" padded>
             <div className="row between wrap gap-sm">

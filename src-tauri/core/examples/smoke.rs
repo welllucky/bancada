@@ -50,5 +50,13 @@ fn main() {
     for r in &recs {
         println!("  [{:?}] {} — {}", r.severity, r.title, r.evidence);
     }
+    let nu = c::net_usage(s, 1.0, true);
+    println!(
+        "net_usage: disponível={} {} pontos, {} apps, rx={} tx={}",
+        nu["available"], nu["timeline"].as_array().map_or(0, |a| a.len()), nu["apps"].as_array().map_or(0, |a| a.len()), nu["rx"], nu["tx"]
+    );
+    let nc = c::net_connections(s);
+    println!("net_connections: legível={} {} sockets", nc["readable"], nc["sockets"].as_array().map_or(0, |a| a.len()));
+    println!("net_live: {}", c::net_live(s)["ifaces"]);
     println!("total {:.1}s", t.elapsed().as_secs_f64());
 }

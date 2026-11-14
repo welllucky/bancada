@@ -1,5 +1,6 @@
 import type { DeviceApi } from "./port";
 import { logLabel } from "../actions";
+import type { NetApp, NetSocket } from "./types";
 import type { Action, AppEntry, BatteryStats, HistoryData, Recommendation } from "./types";
 
 /**
@@ -98,6 +99,30 @@ const APPS: AppEntry[] = [
   { package: "com.example.sideload", uid: 10401, installer: "com.android.chrome", store: false, bucket: "restricted", disabled: false },
   { package: "com.example.restored", uid: 10402, installer: "com.samsung.android.scloud", store: false, bucket: "rare", disabled: false },
 ];
+
+const MB = 1024 * 1024;
+/** Peso de cada app no tráfego da demonstração: [pacote, uid, fração, fração em 2º plano, fração no Wi-Fi]. */
+const NET_APPS: [string, number, number, number, number][] = [
+  ["com.google.android.youtube", 10190, 0.42, 0.05, 0.9],
+  ["com.instagram.android", 10288, 0.22, 0.15, 0.7],
+  ["com.whatsapp", 10369, 0.12, 0.55, 0.8],
+  ["com.spotify.music", 10301, 0.1, 0.6, 0.6],
+  ["com.google.android.gms", 10150, 0.06, 0.95, 0.85],
+  ["org.telegram.messenger", 10322, 0.04, 0.3, 1],
+];
+const NET_SOCKETS: NetSocket[] = [
+  { proto: "TCP", local: "192.168.0.10", local_port: 50312, remote: "157.240.12.53", remote_port: 443, state: "estabelecida", uid: 10369, packages: ["com.whatsapp"], label: "com.whatsapp" },
+  { proto: "TCP", local: "192.168.0.10", local_port: 50318, remote: "157.240.12.60", remote_port: 5222, state: "estabelecida", uid: 10369, packages: ["com.whatsapp"], label: "com.whatsapp" },
+  { proto: "TCP", local: "192.168.0.10", local_port: 41022, remote: "142.250.79.110", remote_port: 443, state: "estabelecida", uid: 10190, packages: ["com.google.android.youtube"], label: "com.google.android.youtube" },
+  { proto: "UDP", local: "192.168.0.10", local_port: 39811, remote: "142.250.79.110", remote_port: 443, state: "estabelecida", uid: 10190, packages: ["com.google.android.youtube"], label: "com.google.android.youtube" },
+  { proto: "TCP", local: "192.168.0.10", local_port: 38200, remote: "142.251.0.188", remote_port: 5228, state: "estabelecida", uid: 10150, packages: ["com.google.android.gms"], label: "com.google.android.gms" },
+  { proto: "TCP", local: "192.168.0.10", local_port: 44590, remote: "35.186.224.25", remote_port: 443, state: "estabelecida", uid: 10301, packages: ["com.spotify.music"], label: "com.spotify.music" },
+  { proto: "TCP", local: "192.168.0.10", local_port: 46010, remote: "192.168.0.20", remote_port: 8009, state: "estabelecida", uid: 10301, packages: ["com.spotify.music"], label: "com.spotify.music" },
+  { proto: "TCP", local: "0.0.0.0", local_port: 5555, remote: "0.0.0.0", remote_port: 0, state: "ouvindo", uid: 2000, packages: [], label: "shell/adb" },
+  { proto: "UDP", local: "0.0.0.0", local_port: 5353, remote: "0.0.0.0", remote_port: 0, state: "aberta", uid: 10150, packages: ["com.google.android.gms"], label: "com.google.android.gms" },
+];
+let liveRx = 8_000 * MB;
+let liveTx = 900 * MB;
 
 export const mockAdapter: DeviceApi = {
   source: "mock",
@@ -323,4 +348,30 @@ export const mockAdapter: DeviceApi = {
   wifiConnect: (addr) => wait(`Conectado a ${addr}`, 400),
   wifiDisconnect: (addr) => wait(`Desconectado de ${addr}`),
   wifiFromUsb: () => wait("Conectado a 192.168.0.10:5555", 900),
+  netUsage: (_serial, days) => {
+    const end = Math.floor(now() / 3600) * 3600;
+    const hours = Math.round(days * 24);
+    const timeline = Array.from({ length: hours }, (_, k) => {
+      const t = end - (hours - 1 - k) * 3600;
+      const h = new Date(t * 1000).getHours();
+      const day = h >= 8 && h <= 23 ? 1 : 0.15;
+      const rx = Math.round((40 + wave(k, 24, 30) + (h === 21 ? 160 : 0)) * day * MB);
+      const tx = Math.round(rx * 0.08);
+      return { t, rx, tx, wifi: Math.round((rx + tx) * 0.78), mobile: Math.round((rx + tx) * 0.22) };
+    });
+    const rx = timeline.reduce((a, p) => a + p.rx, 0);
+    const tx = timeline.reduce((a, p) => a + p.tx, 0);
+    const apps: NetApp[] = NET_APPS.map(([pkg, uid, share, bg, wifi]) => {
+      const total = (rx + tx) * share;
+      return { uid, packages: [pkg], label: pkg, rx: Math.round(total * 0.9), tx: Math.round(total * 0.1), wifi: Math.round(total * wifi), mobile: Math.round(total * (1 - wifi)), foreground: Math.round(total * (1 - bg)) };
+    });
+    return wait({ timeline, apps, rx, tx, available: true }, 300);
+  },
+  netConnections: () => wait({ readable: true, sockets: NET_SOCKETS }, 150),
+  netLive: () => {
+    const k = Date.now() / 2000;
+    liveRx += Math.round((350 + Math.sin(k / 3) * 250 + (Math.sin(k / 11) > 0.7 ? 2500 : 0)) * 1024 * 2);
+    liveTx += Math.round((40 + Math.sin(k / 2) * 25) * 1024 * 2);
+    return wait({ t: Date.now(), ifaces: [{ name: "wlan0", transport: "wifi" as const, rx: liveRx, tx: liveTx }] }, 60);
+  },
 };

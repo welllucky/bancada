@@ -240,3 +240,24 @@ export interface WifiService {
   kind: "pairing" | "connect";
   addr: string;
 }
+
+export interface NetPoint { t: number; rx: number; tx: number; wifi: number; mobile: number }
+export interface NetApp { uid: number; packages: string[]; label: string; rx: number; tx: number; wifi: number; mobile: number; foreground: number }
+/** Consumo de rede no período (bytes). `available` falso quando o aparelho não expôs o netstats. */
+export interface NetUsage { timeline: NetPoint[]; apps: NetApp[]; rx: number; tx: number; available: boolean }
+export interface NetSocket {
+  proto: "TCP" | "UDP";
+  local: string;
+  local_port: number;
+  remote: string;
+  remote_port: number;
+  state: string;
+  uid: number;
+  packages: string[];
+  label: string;
+}
+/** Conexões abertas agora. `readable` falso quando o Android não deixa ler `/proc/net`. */
+export interface NetConnections { readable: boolean; sockets: NetSocket[] }
+export interface NetIface { name: string; transport: "wifi" | "mobile" | "other"; rx: number; tx: number }
+/** Contadores acumulados das interfaces num instante (ms). */
+export interface NetLive { t: number; ifaces: NetIface[] }

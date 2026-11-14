@@ -193,6 +193,21 @@ async fn app_icon(state: tauri::State<'_, AppState>, serial: String, package: St
 }
 
 #[tauri::command]
+async fn net_usage(serial: String, days: f64, refresh: Option<bool>) -> R<Value> {
+    blocking(move || c::net_usage(&serial, days, refresh.unwrap_or(false))).await
+}
+
+#[tauri::command]
+async fn net_connections(serial: String) -> R<Value> {
+    blocking(move || c::net_connections(&serial)).await
+}
+
+#[tauri::command]
+async fn net_live(serial: String) -> R<Value> {
+    blocking(move || c::net_live(&serial)).await
+}
+
+#[tauri::command]
 async fn wifi_services() -> R<Value> {
     blocking(|| wireless::services().map_err(|e| e.to_string()).and_then(to_value)).await?
 }
@@ -263,7 +278,10 @@ pub fn run() {
             wifi_pair,
             wifi_connect,
             wifi_disconnect,
-            wifi_from_usb
+            wifi_from_usb,
+            net_usage,
+            net_connections,
+            net_live
         ])
         .run(tauri::generate_context!())
         .expect("error while running Phone Deck");

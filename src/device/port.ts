@@ -1,6 +1,6 @@
 import type {
   Action, AppDetail, AppEntry, BatteryHistory, BatteryStats, BluetoothInfo, BootInfo, Device, HistoryData, Network,
-  Overview, Processes, Recommendation, SecurityInfo, WifiService,
+  Overview, Processes, Recommendation, SecurityInfo, WifiService, NetConnections, NetLive, NetUsage,
 } from "./types";
 
 /**
@@ -25,6 +25,9 @@ export interface DeviceApi {
   optimizations(serial: string): Promise<Recommendation[]>;
   apply(serial: string, action: Action): Promise<string>;
   history(serial: string, days: number): Promise<HistoryData>;
+  netUsage(serial: string, days: number, refresh?: boolean): Promise<NetUsage>;
+  netConnections(serial: string): Promise<NetConnections>;
+  netLive(serial: string): Promise<NetLive>;
   /** Ícone real do app (`data:` URL) extraído do APK, ou nulo. */
   appIcon(serial: string, pkg: string): Promise<string | null>;
   wifiServices(): Promise<WifiService[]>;

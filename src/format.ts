@@ -36,3 +36,19 @@ export const shortPkg = (p: string) => {
   const parts = p.split(".");
   return parts.length > 2 ? parts.slice(-2).join(".") : p;
 };
+
+/** Bytes em B, KB, MB ou GB (base 1024), no formato brasileiro. */
+export const fmtBytes = (b?: number | null): string => {
+  if (b == null || !isFinite(b)) return "—";
+  const u = ["B", "KB", "MB", "GB", "TB"];
+  let i = 0;
+  let v = b;
+  while (v >= 1024 && i < u.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${v.toLocaleString("pt-BR", { maximumFractionDigits: v >= 100 || i === 0 ? 0 : 1 })} ${u[i]}`;
+};
+
+/** Taxa em bytes por segundo, como "1,2 MB/s". */
+export const fmtRate = (bps?: number | null): string => (bps == null ? "—" : `${fmtBytes(bps)}/s`);

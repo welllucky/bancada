@@ -6,6 +6,7 @@ pub mod adb;
 pub mod collectors;
 pub mod history;
 pub mod icons;
+pub mod netusage;
 pub mod wireless;
 pub mod optimizer;
 pub mod parse;
