@@ -1,7 +1,7 @@
 //! Tauri shell: exposes core collectors/actions as async commands and runs
 //! the background history sampler.
 
-use phone_deck_core::{actions::Action, adb, collectors as c, history::Db, optimizer};
+use phone_deck_core::{actions::Action, adb, collectors as c, history::Db, optimizer, wireless};
 use serde_json::{json, Value};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -9,6 +9,10 @@ use tauri::Manager;
 
 struct AppState {
     db: Arc<Mutex<Db>>,
+    /// Cache dos ícones extraídos dos APKs.
+    icons_dir: std::path::PathBuf,
+    /// Uma cópia de APK por vez: evita saturar o cabo e baixar o mesmo APK duas vezes.
+    icon_lock: Arc<Mutex<()>>,
 }
 
 type R<T> = Result<T, String>;
@@ -178,6 +182,54 @@ fn start_sampler(db: Arc<Mutex<Db>>) {
     });
 }
 
+#[tauri::command]
+async fn app_icon(state: tauri::State<'_, AppState>, serial: String, package: String) -> R<Option<String>> {
+    let (dir, lock) = (state.icons_dir.clone(), state.icon_lock.clone());
+    blocking(move || {
+        let _g = lock.lock().unwrap_or_else(|e| e.into_inner());
+        c::app_icon(&serial, &package, &dir).map_err(|e| e.to_string())
+    })
+    .await?
+}
+
+#[tauri::command]
+async fn wifi_services() -> R<Value> {
+    blocking(|| wireless::services().map_err(|e| e.to_string()).and_then(to_value)).await?
+}
+
+#[tauri::command]
+async fn wifi_pair(addr: String, code: String) -> R<String> {
+    blocking(move || wireless::pair(&addr, &code).map_err(|e| e.to_string())).await?
+}
+
+#[tauri::command]
+async fn wifi_connect(addr: String) -> R<String> {
+    blocking(move || wireless::connect(&addr).map_err(|e| e.to_string())).await?
+}
+
+#[tauri::command]
+async fn wifi_disconnect(addr: String) -> R<String> {
+    blocking(move || wireless::disconnect(&addr).map_err(|e| e.to_string())).await?
+}
+
+/// Liga a depuração por Wi-Fi a partir do cabo (`adb tcpip`). Fica no registro de ações, como as escritas.
+#[tauri::command]
+async fn wifi_from_usb(state: tauri::State<'_, AppState>, serial: String) -> R<String> {
+    let db = state.db.clone();
+    blocking(move || {
+        let res = wireless::enable_from_usb(&serial);
+        if let Ok(db) = db.lock() {
+            let (ok, out) = match &res {
+                Ok(o) => (true, o.clone()),
+                Err(e) => (false, e.to_string()),
+            };
+            let _ = db.log_action(&serial, &format!("depuração por Wi-Fi (adb tcpip {})", wireless::TCPIP_PORT), ok, &out);
+        }
+        res.map_err(|e| e.to_string())
+    })
+    .await?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -186,7 +238,8 @@ pub fn run() {
             let db = Db::open(&dir.join("history.db")).map_err(|e| e.to_string())?;
             let db = Arc::new(Mutex::new(db));
             start_sampler(db.clone());
-            app.manage(AppState { db });
+            let icons_dir = app.path().app_cache_dir().unwrap_or_else(|_| dir.clone()).join("icons");
+            app.manage(AppState { db, icons_dir, icon_lock: Arc::new(Mutex::new(())) });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -204,7 +257,13 @@ pub fn run() {
             security,
             optimizations,
             apply_action,
-            history
+            history,
+            app_icon,
+            wifi_services,
+            wifi_pair,
+            wifi_connect,
+            wifi_disconnect,
+            wifi_from_usb
         ])
         .run(tauri::generate_context!())
         .expect("error while running Phone Deck");

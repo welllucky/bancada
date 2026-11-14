@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AppIcon } from "../appIcon";
 import { Pause, Play, RotateCcw, Square } from "lucide-react";
 import { Action, api, LiveProc, Recommendation, Timed } from "../api";
 import { appLabel } from "../appNames";
@@ -183,7 +184,7 @@ function Bateria() {
           onRow={(r) => r.packages[0] && openApp(r.packages[0])}
           rowLabel={(r) => `Abrir ${appLabel(r.packages[0] ?? r.label)}`}
           cols={[
-            { key: "label", label: "App", render: (r) => <span title={r.packages.join(", ")}>{r.packages[0] ? appLabel(r.packages[0]) : r.label}</span>, sort: (r) => r.label },
+            { key: "label", label: "App", render: (r) => <span className="app-row" title={r.packages.join(", ")}>{r.packages[0] && <AppIcon pkg={r.packages[0]} size={24} />}{r.packages[0] ? appLabel(r.packages[0]) : r.label}</span>, sort: (r) => r.label },
             { key: "bar", label: "Composição", width: "38%", render: (r) => <StackBar parts={r.parts} max={maxMah} /> },
             { key: "bg", label: "2º plano", align: "right", render: (r) => fmtNum(r.bg_mah, 1), sort: (r) => r.bg_mah },
             { key: "mah", label: "mAh", align: "right", render: (r) => <b>{fmtNum(r.mah, 1)}</b>, sort: (r) => r.mah },
@@ -205,7 +206,7 @@ function Bateria() {
           rowLabel={(r) => `Abrir ${appLabel(r.packages?.[0] ?? r.name)}`}
           cols={[
             ...(wake === "wakelocks" || wake === "jobs"
-              ? [{ key: "who", label: "App", render: (r: Timed) => (r.packages?.[0] ? appLabel(r.packages[0]) : r.label ?? r.uid ?? ""), sort: (r: Timed) => r.label ?? "" }]
+              ? [{ key: "who", label: "App", render: (r: Timed) => (r.packages?.[0] ? <span className="app-row"><AppIcon pkg={r.packages[0]} size={24} />{appLabel(r.packages[0])}</span> : r.label ?? r.uid ?? ""), sort: (r: Timed) => r.label ?? "" }]
               : []),
             { key: "name", label: "Nome", width: "45%", render: (r: Timed) => <code className="wrap-code">{r.name}</code> },
             { key: "bar", label: "", width: "14%", render: (r: Timed) => <StackBar parts={{ wakelock: r.seconds }} max={maxT} /> },
@@ -272,7 +273,7 @@ function Agora() {
           onRow={(r) => { const pkg = pkgOf(r.name); if (pkg) openApp(pkg); }}
           rowLabel={(r) => `Abrir ${appLabel(r.name)}`}
           cols={[
-            { key: "name", label: "Processo", render: (r) => (pkgOf(r.name) ? <span><b>{appLabel(r.name)}</b> <small className="mono muted">{r.name}</small></span> : <span className="mono">{r.name}</span>), sort: (r) => r.name },
+            { key: "name", label: "Processo", render: (r) => (pkgOf(r.name) ? <span className="app-row"><AppIcon pkg={pkgOf(r.name)!} size={24} /><span><b>{appLabel(r.name)}</b> <small className="mono muted">{r.name}</small></span></span> : <span className="mono">{r.name}</span>), sort: (r) => r.name },
             { key: "cpu", label: "CPU", width: "190px", sort: (r) => r.cpu, render: (r) => (
               <span className="row gap-sm">
                 <span style={{ flex: 1 }}><LuckMeter label={`CPU de ${r.name}`} value={r.cpu} tone={r.cpu > 20 && asleep ? "danger" : "accent"} compact /></span>
@@ -340,7 +341,7 @@ function Memoria() {
           onRow={(r) => { const pkg = pkgOf(r.name); if (pkg) openApp(pkg); }}
           rowLabel={(r) => `Abrir ${appLabel(r.name)}`}
           cols={[
-            { key: "name", label: "Processo", render: (r) => (pkgOf(r.name) ? <span><b>{appLabel(r.name)}</b> <small className="mono muted">{r.name}</small></span> : <span className="mono">{r.name}</span>), sort: (r) => r.name },
+            { key: "name", label: "Processo", render: (r) => (pkgOf(r.name) ? <span className="app-row"><AppIcon pkg={pkgOf(r.name)!} size={24} /><span><b>{appLabel(r.name)}</b> <small className="mono muted">{r.name}</small></span></span> : <span className="mono">{r.name}</span>), sort: (r) => r.name },
             { key: "bar", label: "", width: "30%", render: (r) => <LuckMeter label={`Memória de ${r.name}`} value={r.kb} max={top} compact /> },
             { key: "kb", label: "PSS", align: "right", render: (r) => <b>{fmtKb(r.kb)}</b>, sort: (r) => r.kb },
           ]}

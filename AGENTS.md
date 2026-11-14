@@ -9,6 +9,8 @@ Visão de produto e instruções de uso para humanos: `README.md`. Este arquivo 
 - `src-tauri/core/` — crate **`phone-deck-core`**, Rust puro, **sem dependência de Tauri/WebKit**. Toda a lógica vive aqui: `adb.rs` (execução), `parse.rs` (parsers de `dumpsys`/`top`/`ps`, funções puras), `collectors.rs` (chamam `adb` + `parse`), `optimizer.rs` (regras → recomendações), `actions.rs` (escritas permitidas), `history.rs` (SQLite). Existe separado para ser testável em qualquer máquina/CI sem webview.
 - `src-tauri/src/lib.rs` — casca fina: cada `#[tauri::command]` embrulha um coletor em `spawn_blocking`; thread de amostragem (bateria a cada 60 s, consumo por app a cada 30 min) grava no SQLite em `app_data_dir()/history.db`.
 - `src-tauri/src/main.rs` — workarounds de ambiente Linux antes de qualquer thread (ver _Armadilhas Linux_).
+- `src-tauri/core/src/icons.rs` — ícone real do app a partir do APK (manifesto + `resources.arsc` via `apk-info`): ícone adaptativo composto em SVG, senão o bitmap mais denso; cache em `app_cache_dir()/icons`, chave pelo caminho do APK (muda a cada atualização). Conferência visual: `cargo run -p phone-deck-core --example icon -- saida.html *.apk`.
+- `src-tauri/core/src/wireless.rs` — depuração por Wi-Fi: mDNS, pareamento por código, conexão, `tcpip` a partir do cabo.
 - `src/api.ts` — única ponte TS→Rust (`invoke`), espelha os tipos Rust; `src/pages/*` — uma página por seção; `src/ui.tsx` — componentes compartilhados; gráficos são SVG à mão.
 
 Fluxo: página → `api.x()` → comando Tauri → `spawn_blocking` → `collectors::x` → `adb::shell` → `parse::x` → JSON → página.
@@ -20,6 +22,7 @@ Fluxo: página → `api.x()` → comando Tauri → `spawn_blocking` → `collect
 3. **Destrutivos proibidos:** `pm clear`, `rm`, `wipe`, factory reset, desinstalar app de sistema. `UninstallUserApp` só atua em app de terceiros com `--user 0`.
 4. A UI pede confirmação mostrando a descrição exata (`Action::describe`) antes de qualquer `Action`.
 5. `capabilities/default.json` concede só `core:default`; plugins Tauri (shell, fs, http) ficam fora.
+6. Fora do `adb shell`, o core só usa estes subcomandos do `adb`, todos com argumento validado: `pull` de APK (caminho vindo de `pm path`, `adb::valid_apk_path`) para extrair o ícone em `icons.rs`, apagando a cópia em seguida; `pair`/`connect`/`disconnect` com `IPv4:porta` e código de 6 dígitos (`wireless.rs`); `mdns services`; `tcpip 5555` (porta fixa, registrado no histórico de ações).
 
 Ao adicionar escrita nova: nova variante em `Action` + validação + teste de rejeição. Nunca alargue o whitelist para "qualquer valor".
 

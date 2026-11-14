@@ -232,3 +232,11 @@ export interface SecurityInfo {
   always_on_vpn?: string | null;
   non_store_apps: { package: string; installer?: string | null }[];
 }
+
+/** Serviço de depuração por Wi-Fi anunciado na rede (mDNS). */
+export interface WifiService {
+  name: string;
+  /** `pairing`: tela "Parear com código" aberta; `connect`: aparelho já pareado, pronto para conectar. */
+  kind: "pairing" | "connect";
+  addr: string;
+}

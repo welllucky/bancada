@@ -12,3 +12,6 @@ serde_json = "1.0"
 rusqlite = { version = "0.31", features = ["bundled"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 wait-timeout = "0.2"
+apk-info = "=1.1.1"
+apk-info-axml = "=1.1.1"
+apk-info-xml = "=1.1.1"

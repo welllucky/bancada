@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AppIcon } from "../appIcon";
 import { ArrowLeft, Ban, Square, Trash2 } from "lucide-react";
 import { Action, api, AppEntry } from "../api";
 import { appLabel, installerLabel } from "../appNames";
@@ -75,7 +76,7 @@ function AppList() {
             empty="Nenhum app com esse filtro."
             cols={[
               { key: "name", label: "App", sort: (r) => appLabel(r.package), render: (r) => (
-                <span className="app-cell"><b>{appLabel(r.package)}</b><small className="mono muted">{r.package}</small></span>
+                <span className="app-row"><AppIcon pkg={r.package} size={32} /><span className="app-cell"><b>{appLabel(r.package)}</b><small className="mono muted">{r.package}</small></span></span>
               ) },
               { key: "src", label: "Origem", sort: (r) => (r.store ? 0 : 1), render: (r) => <LuckBadge tone={r.store ? "neutral" : "warning"}>{installerLabel(r.installer)}</LuckBadge> },
               { key: "bucket", label: "Segundo plano", sort: (r) => r.bucket ?? "", render: (r) => (r.bucket ? <LuckBadge tone={BUCKET_TONE[r.bucket] ?? "neutral"}>{BUCKET_LABEL[r.bucket] ?? r.bucket}</LuckBadge> : <span className="muted">—</span>) },
@@ -136,7 +137,7 @@ function AppDetailPage({ pkg }: { pkg: string }) {
       </div>
       <header className="page-head">
         <div className="row gap-md">
-          <div className="app-mark" aria-hidden>{name.slice(0, 1).toUpperCase()}</div>
+          <AppIcon pkg={pkg} size={64} />
           <div>
             <h1>{name}</h1>
             <p className="muted mono small">{pkg}</p>
