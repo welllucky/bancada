@@ -2678,7 +2678,7 @@ dependencies = [
 
 [[package]]
 name = "phone-deck"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "phone-deck-core",
  "serde",
@@ -2690,7 +2690,7 @@ dependencies = [
 
 [[package]]
 name = "phone-deck-core"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "apk-info",
  "apk-info-axml",
