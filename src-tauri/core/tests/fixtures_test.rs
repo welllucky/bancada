@@ -96,3 +96,64 @@ fn app_timeline_from_real_history() {
     assert!(tl.spans.iter().all(|s| s.end >= s.start));
     assert!(!tl.screen_off.is_empty());
 }
+
+// ---- other vendors (synthetic AOSP-format fixtures, see fixtures/synthetic/README.md)
+
+mod other_vendors {
+    use super::fx;
+    use phone_deck_core::optimizer::{recommend, Input};
+    use phone_deck_core::parse::*;
+    use phone_deck_core::vendor::{Capability, Profile, Vendor};
+
+    fn syn(name: &str) -> String {
+        fx(&format!("synthetic/{name}"))
+    }
+
+    #[test]
+    fn pixel_battery_without_samsung_fields() {
+        let b = parse_battery(&syn("pixel_battery.txt"));
+        assert_eq!(b.level, Some(78));
+        assert_eq!(b.status.as_deref(), Some("carregando"));
+        assert_eq!(b.plugged.as_deref(), Some("USB"));
+        assert_eq!(b.temp_c, Some(29.4));
+        assert_eq!(b.current_ma, None, "AOSP has no `current now`");
+        assert!(b.asoc.is_none() && b.bsoh.is_none() && b.protect_threshold.is_none() && b.first_use.is_none());
+    }
+
+    #[test]
+    fn xiaomi_small_current_in_microamps() {
+        let b = parse_battery(&syn("xiaomi_battery.txt"));
+        assert_eq!(b.level, Some(52));
+        assert_eq!(b.current_ma, Some(-15.2), "15 200 µA, not 15 A");
+    }
+
+    #[test]
+    fn vendor_detection() {
+        let pixel = Profile::from_props(&parse_props(&syn("pixel_getprop.txt")));
+        assert_eq!(pixel.vendor, Vendor::Google);
+        assert!(pixel.skin.is_none());
+        let mi = Profile::from_props(&parse_props(&syn("xiaomi_getprop.txt")));
+        assert_eq!(mi.vendor, Vendor::Xiaomi);
+        assert_eq!(mi.skin.as_deref(), Some("HyperOS OS2.0"));
+        assert!(!mi.has(Capability::BatteryProtection));
+    }
+
+    #[test]
+    fn vendor_stores_count_as_store() {
+        let apps = parse_third_party(&syn("pm_third_mixed.txt"));
+        let off: Vec<_> = apps.iter().filter(|a| !a.store).map(|a| a.package.as_str()).collect();
+        assert_eq!(off, ["com.example.sideload", "com.example.browserdl"]);
+    }
+
+    #[test]
+    fn pixel_gets_no_samsung_advice() {
+        let b = parse_battery(&syn("pixel_battery.txt"));
+        let profile = Profile::from_props(&parse_props(&syn("pixel_getprop.txt")));
+        let r = recommend(&Input { battery: Some(&b), non_store_apps: 1, profile, ..Default::default() });
+        for rec in &r {
+            assert_ne!(rec.id, "battery-protect");
+            let text = format!("{} {}", rec.title, rec.detail);
+            assert!(!text.contains("Samsung") && !text.contains("Galaxy") && !text.contains("One UI"), "{}: {text}", rec.id);
+        }
+    }
+}

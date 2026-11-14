@@ -2,6 +2,7 @@
 
 use crate::adb::{self, Result};
 use crate::parse::{self, *};
+use crate::vendor::Profile;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -86,6 +87,7 @@ pub struct Overview {
     pub wakefulness: Option<String>,
     pub thermal_status: Option<i64>,
     pub battery: BatteryNow,
+    pub profile: Profile,
 }
 
 pub fn uptime(serial: &str) -> Option<f64> {
@@ -122,6 +124,7 @@ pub fn overview(serial: &str) -> Overview {
         wakefulness: wakefulness(&sh(serial, &["dumpsys", "power"])),
         thermal_status: regex::Regex::new(r"Thermal Status: (\d+)").unwrap().captures(&therm).and_then(|c| c[1].parse().ok()),
         battery: battery_now(serial),
+        profile: Profile::from_props(&p),
     }
 }
 

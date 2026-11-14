@@ -11,3 +11,4 @@ pub mod apptimeline;
 pub mod wireless;
 pub mod optimizer;
 pub mod parse;
+pub mod vendor;

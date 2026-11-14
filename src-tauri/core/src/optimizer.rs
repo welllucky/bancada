@@ -3,6 +3,7 @@
 
 use crate::actions::Action;
 use crate::parse::{BatteryNow, BatteryStats, LiveProc, Storage};
+use crate::vendor::{Capability, Profile};
 use serde::Serialize;
 use std::collections::HashMap;
 
@@ -37,6 +38,8 @@ pub struct Input<'a> {
     pub storage: Option<&'a Storage>,
     pub non_store_apps: usize,
     pub uptime_s: Option<f64>,
+    /// Vendor extras available on this phone; default assumes plain AOSP.
+    pub profile: Profile,
 }
 
 fn set(ns: &str, k: &str, v: &str) -> Option<Action> {
@@ -162,7 +165,8 @@ pub fn recommend(i: &Input) -> Vec<Recommendation> {
                 push("battery-hot", Severity::Critical, "Bateria quente", "Temperatura alta acelera o desgaste. Tire a capinha, evite carregar enquanto joga e veja os processos com CPU alta.".into(), format!("{t:.1} °C"), None, None);
             }
         }
-        if b.protect_mode == Some(0) || b.protect_threshold.is_none() {
+        // Charge protection is a Samsung setting: elsewhere its absence says nothing.
+        if i.profile.has(Capability::BatteryProtection) && (b.protect_mode == Some(0) || b.protect_threshold.is_none()) {
             push("battery-protect", Severity::Info, "Ative a proteção de bateria", "Em Configurações → Bateria → Proteção da bateria, limitar a carga a 80–85% prolonga a vida útil.".into(), "proteção não detectada".into(), None, None);
         }
     }
@@ -174,8 +178,13 @@ pub fn recommend(i: &Input) -> Vec<Recommendation> {
         }
     }
     let aod_on = s("system.aod_mode").as_deref() == Some("1") || s("secure.doze_always_on").as_deref() == Some("1");
-    if aod_on && s("system.aod_tap_to_show_mode").as_deref() != Some("1") {
-        push("aod", Severity::Info, "Always On Display sempre ligado", "O AOD contínuo consome ~3–5% por dia. Use 'Tocar para mostrar' ou um horário.".into(), "AOD ativo o tempo todo".into(), set("system", "aod_tap_to_show_mode", "1"), Some("Tocar para mostrar"));
+    if i.profile.has(Capability::AodTapToShow) {
+        if aod_on && s("system.aod_tap_to_show_mode").as_deref() != Some("1") {
+            push("aod", Severity::Info, "Always On Display sempre ligado", "O AOD contínuo consome ~3–5% por dia. Use 'Tocar para mostrar' ou um horário.".into(), "AOD ativo o tempo todo".into(), set("system", "aod_tap_to_show_mode", "1"), Some("Tocar para mostrar"));
+        }
+    } else if s("secure.doze_always_on").as_deref() == Some("1") {
+        // AOSP key; no whitelisted fix outside Samsung, so advice only.
+        push("aod", Severity::Info, "Tela sempre ativa ligada", "A tela sempre ativa consome alguns % de bateria por dia. Se não usa, desative em Configurações → Tela.".into(), "doze_always_on=1".into(), None, None);
     }
     if s("global.wifi_scan_always_enabled").as_deref() == Some("1") {
         push("wifi-scan", Severity::Info, "Busca de Wi-Fi sempre ativa", "Mesmo com o Wi-Fi desligado o rádio continua procurando redes para melhorar a localização.".into(), "wifi_scan_always_enabled=1".into(), set("global", "wifi_scan_always_enabled", "0"), Some("Desativar"));
@@ -205,7 +214,11 @@ pub fn recommend(i: &Input) -> Vec<Recommendation> {
         push("dexopt", Severity::Info, "Concluir otimização pós-atualização", "Após atualizar ou reiniciar, o Android recompila apps aos poucos. Rodar agora (de preferência carregando) evita esse gasto ao longo dos dias.".into(), "reinício recente".into(), Some(Action::BgDexopt), Some("Otimizar agora"));
     }
     if i.non_store_apps > 0 {
-        push("non-store", Severity::Info, "Apps fora da loja", "Revise os apps instalados fora da Play Store/Galaxy Store em Aparelho › Segurança. Apps restaurados do Samsung Cloud também aparecem aqui.".into(), format!("{} apps", i.non_store_apps), None, None);
+        let mut detail = format!("Revise os apps instalados fora da {} em Aparelho › Segurança.", i.profile.vendor.store_label());
+        if i.profile.vendor == crate::vendor::Vendor::Samsung {
+            detail.push_str(" Apps restaurados do Samsung Cloud também aparecem aqui.");
+        }
+        push("non-store", Severity::Info, "Apps fora da loja", detail, format!("{} apps", i.non_store_apps), None, None);
     }
 
     r.sort_by_key(|x| x.severity);
@@ -247,6 +260,41 @@ pub fn mark_resolved(recs: &mut [Recommendation], restricted_bg: &std::collectio
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::vendor::Vendor;
+
+    fn unprotected_battery() -> BatteryNow {
+        BatteryNow { level: Some(70), temp_c: Some(30.0), ..Default::default() }
+    }
+
+    #[test]
+    fn battery_protect_only_on_samsung() {
+        let b = unprotected_battery();
+        let ids = |p: Profile| recommend(&Input { battery: Some(&b), profile: p, ..Default::default() }).into_iter().map(|x| x.id).collect::<Vec<_>>();
+        assert!(ids(Profile::new(Vendor::Samsung)).contains(&"battery-protect".to_string()));
+        for v in [Vendor::Google, Vendor::Xiaomi, Vendor::Other] {
+            assert!(!ids(Profile::new(v)).contains(&"battery-protect".to_string()), "{v:?}");
+        }
+    }
+
+    #[test]
+    fn aod_on_pixel_suggests_no_samsung_setting() {
+        let mut settings = HashMap::new();
+        settings.insert("secure.doze_always_on".into(), Some("1".into()));
+        let r = recommend(&Input { settings: settings.clone(), profile: Profile::new(Vendor::Google), ..Default::default() });
+        let aod = r.iter().find(|x| x.id == "aod").expect("aod advice");
+        assert!(aod.action.is_none());
+        settings.insert("secure.doze_always_on".into(), Some("0".into()));
+        let r = recommend(&Input { settings, profile: Profile::new(Vendor::Google), ..Default::default() });
+        assert!(!r.iter().any(|x| x.id == "aod"));
+    }
+
+    #[test]
+    fn non_store_text_follows_vendor() {
+        let detail = |v| recommend(&Input { non_store_apps: 2, profile: Profile::new(v), ..Default::default() }).into_iter().find(|x| x.id == "non-store").unwrap().detail;
+        assert!(detail(Vendor::Samsung).contains("Samsung Cloud"));
+        let pixel = detail(Vendor::Google);
+        assert!(!pixel.contains("Samsung") && !pixel.contains("Galaxy"), "{pixel}");
+    }
 
     fn proc(name: &str, cpu: f64) -> LiveProc {
         LiveProc { pid: "1".into(), user: "u0_a1".into(), cpu, mem: 0.0, res: "".into(), state: "S".into(), time: "".into(), name: name.into() }
@@ -298,7 +346,7 @@ mod tests {
         settings.insert("global.ble_scan_always_enabled".into(), Some("1".into()));
         settings.insert("system.aod_mode".into(), Some("1".into()));
         settings.insert("system.aod_tap_to_show_mode".into(), Some("0".into()));
-        let i = Input { settings, ..Default::default() };
+        let i = Input { settings, profile: Profile::new(Vendor::Samsung), ..Default::default() };
         let r = recommend(&i);
         for id in ["screen-timeout", "wifi-scan", "ble-scan", "aod"] {
             let rec = r.iter().find(|x| x.id == id).unwrap_or_else(|| panic!("{id}"));

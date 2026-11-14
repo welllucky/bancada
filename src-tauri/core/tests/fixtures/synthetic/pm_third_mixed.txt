@@ -1,0 +1,5 @@
+package:com.example.play  installer=com.android.vending uid:10201
+package:com.example.getapps  installer=com.xiaomi.mipicks uid:10202
+package:com.example.appgallery  installer=com.huawei.appmarket uid:10203
+package:com.example.sideload  installer=null uid:10204
+package:com.example.browserdl  installer=com.android.chrome uid:10205

@@ -138,6 +138,13 @@ pub struct BatteryNow {
     pub discharge_level_total: Option<i64>,
 }
 
+/// `current now` comes in µA on some readings/vendors and mA on others. No
+/// phone moves more than ~12 A through the battery, so a magnitude above
+/// 12 000 can only be µA. Below that it is ambiguous and taken as mA.
+fn current_to_ma(c: f64) -> f64 {
+    if c.abs() > 12_000.0 { c / 1000.0 } else { c }
+}
+
 pub fn parse_battery(t: &str) -> BatteryNow {
     re!(ASOC, r"mSavedBatteryAsoc: \[(\d+)\]");
     re!(BSOH, r"mSavedBatteryBsoh: ([\d.]+)");
@@ -185,8 +192,7 @@ pub fn parse_battery(t: &str) -> BatteryNow {
         health,
         temp_c: kv(t, "temperature").and_then(|v| v.parse::<f64>().ok()).map(|v| v / 10.0),
         voltage_mv: kv(t, "voltage").and_then(|v| v.parse().ok()),
-        // Samsung reports µA (≈1e6); AOSP devices often report mA or µA.
-        current_ma: cur.map(|c| if c.abs() > 20_000.0 { c / 1000.0 } else { c }),
+        current_ma: cur.map(current_to_ma),
         plugged: plugged.map(String::from),
         asoc: cap(&ASOC, t),
         bsoh: cap(&BSOH, t),
@@ -614,7 +620,18 @@ pub fn bucket_name(n: &str) -> String {
     .to_string()
 }
 
-pub const STORE_INSTALLERS: [&str; 2] = ["com.android.vending", "com.sec.android.app.samsungapps"];
+/// Installer packages of official stores (Play + vendor stores). An app from
+/// any of them is not "outside the store", whatever the phone's brand.
+pub const STORE_INSTALLERS: &[&str] = &[
+    "com.android.vending",             // Google Play
+    "com.sec.android.app.samsungapps", // Galaxy Store
+    "com.xiaomi.mipicks",              // Xiaomi GetApps
+    "com.xiaomi.market",               // Xiaomi GetApps (older builds)
+    "com.huawei.appmarket",            // Huawei AppGallery
+    "com.heytap.market",               // OPPO/realme/OnePlus App Market
+    "com.bbk.appstore",                // vivo App Store
+    "com.amazon.venezia",              // Amazon Appstore
+];
 
 /// `pm list packages -3 -i -U`
 pub fn parse_third_party(t: &str) -> Vec<AppEntry> {

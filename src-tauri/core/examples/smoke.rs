@@ -45,6 +45,7 @@ fn main() {
         storage: ov.storage.as_ref(),
         non_store_apps: sec["non_store_apps"].as_array().map(|a| a.len()).unwrap_or(0),
         uptime_s: ov.uptime_s,
+        profile: ov.profile.clone(),
     });
     println!("optimizer: {} recs", recs.len());
     for r in &recs {

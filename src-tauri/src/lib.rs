@@ -115,6 +115,7 @@ async fn optimizations(serial: String) -> R<Value> {
             storage: ov.storage.as_ref(),
             non_store_apps: sec["non_store_apps"].as_array().map(|a| a.len()).unwrap_or(0),
             uptime_s: ov.uptime_s,
+        profile: ov.profile.clone(),
         };
         let mut recs = optimizer::recommend(&input);
         // Correções já aplicadas saem da lista de pendências (os números de bateria são acumulados).
