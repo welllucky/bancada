@@ -3,7 +3,7 @@ import { Activity, History, House, LayoutGrid, Moon, Smartphone, Sun, Usb, Wifi 
 import { api, Action, Device, isTauri, Recommendation } from "./api";
 import { learnLabels, onLabels } from "./appNames";
 import { command, reversal } from "./actions";
-import { Area, Ctx, Route, useAnyStale, useLocal } from "./hooks";
+import { Area, Ctx, reloadAll, Route, useAnyStale, useLocal } from "./hooks";
 import { LuckBadge, LuckButton, LuckCard, LuckDialog, Step, Steps } from "./luck";
 import { problems } from "./recs";
 import InicioPage from "./pages/Inicio";
@@ -52,6 +52,7 @@ export default function App() {
   const tid = useRef(0);
   const refreshing = useAnyStale();
   const [labelsRev, setLabelsRev] = useState(0);
+  const [problemsRev, setProblemsRev] = useState(0);
 
   // Nomes reais dos apps já guardados no catálogo local aparecem desde a abertura.
   useEffect(() => {
@@ -93,10 +94,9 @@ export default function App() {
 
   // Contagem de problemas para o selo da navegação; o otimizador é caro, então só ao trocar de aparelho.
   useEffect(() => {
-    setProblemCount(null);
-    if (!serial) return;
+    if (!serial) return setProblemCount(null);
     api.optimizations(serial).then((rs: Recommendation[]) => setProblemCount(problems(rs).length)).catch(() => {});
-  }, [serial]);
+  }, [serial, problemsRev]);
 
   const toast = useCallback((msg: string, kind: "ok" | "err" = "ok") => {
     const id = ++tid.current;
@@ -124,6 +124,9 @@ export default function App() {
       const out = await api.apply(serial, confirm.action);
       toast(`${confirm.title}: ${out.slice(0, 120)}`, "ok");
       confirm.resolve(true);
+      // Tudo que está na tela pode ter mudado com a ação (botões, problemas, contagem): relê.
+      reloadAll();
+      setProblemsRev((n) => n + 1);
     } catch (e) {
       toast(`${confirm.title} falhou: ${e}`, "err");
       confirm.resolve(false);

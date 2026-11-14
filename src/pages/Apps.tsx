@@ -121,11 +121,8 @@ function AppDetailPage({ pkg }: { pkg: string }) {
   const run = async (title: string, body: string, action: Action, danger = false) => {
     const ok = await confirmAction({ title, body, action, danger });
     if (!ok) return;
+    // As leituras da tela são relidas pelo App depois de qualquer ação.
     if (action.kind === "uninstall_user_app") back();
-    else {
-      detail.reload();
-      list.reload();
-    }
   };
 
   const restricted = d?.run_in_background === "ignore";

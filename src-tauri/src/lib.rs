@@ -114,7 +114,11 @@ async fn optimizations(serial: String) -> R<Value> {
             non_store_apps: sec["non_store_apps"].as_array().map(|a| a.len()).unwrap_or(0),
             uptime_s: ov.uptime_s,
         };
-        to_value(optimizer::recommend(&input))
+        let mut recs = optimizer::recommend(&input);
+        // Correções já aplicadas saem da lista de pendências (os números de bateria são acumulados).
+        let restricted = c::background_restricted(&serial, &optimizer::background_targets(&recs));
+        optimizer::mark_resolved(&mut recs, &restricted);
+        to_value(recs)
     })
     .await?
 }

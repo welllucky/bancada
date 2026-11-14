@@ -23,6 +23,8 @@ pub struct Recommendation {
     pub evidence: String,
     pub action: Option<Action>,
     pub action_label: Option<String>,
+    /// A correção já está aplicada no aparelho; a evidência é histórica e some sozinha com o tempo.
+    pub resolved: bool,
 }
 
 #[derive(Default)]
@@ -67,6 +69,7 @@ pub fn recommend(i: &Input) -> Vec<Recommendation> {
             evidence,
             action,
             action_label: label.map(String::from),
+            resolved: false,
         })
     };
     let s = |k: &str| i.settings.get(k).cloned().flatten();
@@ -209,12 +212,64 @@ pub fn recommend(i: &Input) -> Vec<Recommendation> {
     r
 }
 
+/// Apps cujo "Restringir segundo plano" a recomendação sugere, para conferir o estado atual no aparelho.
+pub fn background_targets(recs: &[Recommendation]) -> Vec<String> {
+    let mut v: Vec<String> = recs
+        .iter()
+        .filter_map(|r| match &r.action {
+            Some(Action::SetBackground { package, mode }) if mode == "ignore" => Some(package.clone()),
+            _ => None,
+        })
+        .collect();
+    v.sort();
+    v.dedup();
+    v
+}
+
+/// Marca como resolvidas as recomendações cuja correção já foi aplicada. Os números de bateria são
+/// acumulados desde a última carga, então o problema continuaria aparecendo mesmo depois da correção.
+pub fn mark_resolved(recs: &mut [Recommendation], restricted_bg: &std::collections::HashSet<String>) {
+    for r in recs.iter_mut() {
+        if let Some(Action::SetBackground { package, mode }) = &r.action {
+            if mode == "ignore" && restricted_bg.contains(package) {
+                r.resolved = true;
+                r.severity = Severity::Info;
+                r.detail = "O segundo plano deste app já está restrito. O número abaixo é acumulado desde a última carga completa e zera na próxima.".into();
+                r.action = None;
+                r.action_label = None;
+            }
+        }
+    }
+    // Resolvidas vão para o fim, depois de tudo que ainda pede ação.
+    recs.sort_by_key(|r| r.resolved);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn proc(name: &str, cpu: f64) -> LiveProc {
         LiveProc { pid: "1".into(), user: "u0_a1".into(), cpu, mem: 0.0, res: "".into(), state: "S".into(), time: "".into(), name: name.into() }
+    }
+
+    #[test]
+    fn restricted_app_marks_wakelock_rec_resolved() {
+        let rec = |pkg: &str| Recommendation {
+            id: format!("wakelock-{pkg}"),
+            severity: Severity::Critical,
+            title: "t".into(),
+            detail: "d".into(),
+            evidence: "e".into(),
+            action: Some(Action::SetBackground { package: pkg.into(), mode: "ignore".into() }),
+            action_label: Some("Restringir segundo plano".into()),
+            resolved: false,
+        };
+        let mut recs = vec![rec("com.whatsapp"), rec("com.spotify.music")];
+        assert_eq!(background_targets(&recs), vec!["com.spotify.music".to_string(), "com.whatsapp".to_string()]);
+        let restricted: std::collections::HashSet<String> = ["com.whatsapp".to_string()].into();
+        mark_resolved(&mut recs, &restricted);
+        assert!(!recs[0].resolved && recs[0].action.is_some(), "o que não foi corrigido continua pedindo ação, primeiro");
+        assert!(recs[1].resolved && recs[1].action.is_none() && recs[1].severity == Severity::Info);
     }
 
     #[test]
