@@ -1,7 +1,7 @@
 //! Tauri shell: exposes core collectors/actions as async commands and runs
 //! the background history sampler.
 
-use phone_deck_core::{actions::Action, adb, collectors as c, history::Db, optimizer, wireless};
+use bancada_core::{actions::Action, adb, collectors as c, history::Db, optimizer, wireless};
 use serde_json::{json, Value};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -167,7 +167,7 @@ fn start_sampler(db: Arc<Mutex<Db>>) {
             if let Ok(devs) = adb::devices() {
                 for d in devs.into_iter().filter(|d| d.state == "device") {
                     let b = c::battery_now(&d.serial);
-                    let wake = phone_deck_core::parse::wakefulness(
+                    let wake = bancada_core::parse::wakefulness(
                         &adb::shell(&d.serial, &["dumpsys", "power"], Duration::from_secs(20)).unwrap_or_default(),
                     );
                     let due = last_drain.get(&d.serial).is_none_or(|t| t.elapsed() > Duration::from_secs(1800));
@@ -190,12 +190,12 @@ fn start_sampler(db: Arc<Mutex<Db>>) {
 }
 
 #[tauri::command]
-async fn app_timeline(serial: String, package: String) -> R<phone_deck_core::apptimeline::Timeline> {
+async fn app_timeline(serial: String, package: String) -> R<bancada_core::apptimeline::Timeline> {
     blocking(move || c::app_timeline(&serial, &package).map_err(|e| e.to_string())).await?
 }
 
 #[tauri::command]
-async fn app_meta(state: tauri::State<'_, AppState>, serial: String, package: String) -> R<phone_deck_core::icons::Meta> {
+async fn app_meta(state: tauri::State<'_, AppState>, serial: String, package: String) -> R<bancada_core::icons::Meta> {
     let (dir, lock) = (state.apps_dir.clone(), state.pull_lock.clone());
     blocking(move || c::app_meta(&serial, &package, &dir, &lock).map_err(|e| e.to_string())).await?
 }
@@ -308,5 +308,5 @@ pub fn run() {
             net_live
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Phone Deck");
+        .expect("error while running Bancada");
 }

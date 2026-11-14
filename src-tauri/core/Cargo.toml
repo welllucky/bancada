@@ -1,8 +1,8 @@
 [package]
-name = "phone-deck-core"
+name = "bancada-core"
 version = "0.4.1"
 edition = "2021"
-description = "ADB collectors, parsers, optimizer and history for Phone Deck"
+description = "ADB collectors, parsers, optimizer and history for Bancada"
 license = "MIT"
 
 [dependencies]

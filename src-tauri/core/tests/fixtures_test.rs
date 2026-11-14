@@ -1,7 +1,7 @@
 //! Parser tests against real (sanitised) output captured from a Galaxy S25
 //! Ultra on Android 17 / One UI 9.
 
-use phone_deck_core::parse::*;
+use bancada_core::parse::*;
 
 fn fx(name: &str) -> String {
     std::fs::read_to_string(format!("{}/tests/fixtures/{name}", env!("CARGO_MANIFEST_DIR"))).unwrap()
@@ -89,7 +89,7 @@ fn bluetooth() {
 
 #[test]
 fn app_timeline_from_real_history() {
-    use phone_deck_core::apptimeline::parse_app_timeline;
+    use bancada_core::apptimeline::parse_app_timeline;
     let tl = parse_app_timeline(&fx("history.txt"), &["u0a369".into()], 2026);
     assert!(tl.start.is_some() && tl.end > tl.start);
     assert!(tl.spans.iter().any(|s| s.kind == "top"), "WhatsApp aparece na tela no histórico real");
@@ -101,9 +101,9 @@ fn app_timeline_from_real_history() {
 
 mod other_vendors {
     use super::fx;
-    use phone_deck_core::optimizer::{recommend, Input};
-    use phone_deck_core::parse::*;
-    use phone_deck_core::vendor::{Capability, Profile, Vendor};
+    use bancada_core::optimizer::{recommend, Input};
+    use bancada_core::parse::*;
+    use bancada_core::vendor::{Capability, Profile, Vendor};
 
     fn syn(name: &str) -> String {
         fx(&format!("synthetic/{name}"))

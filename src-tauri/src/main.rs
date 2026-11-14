@@ -4,7 +4,7 @@
 fn main() {
     #[cfg(target_os = "linux")]
     linux_env_workarounds();
-    phone_deck_lib::run()
+    bancada_lib::run()
 }
 
 /// WebKitGTK/GTK workarounds, applied before any thread is spawned. A value

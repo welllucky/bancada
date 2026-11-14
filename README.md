@@ -58,8 +58,8 @@ Os pacotes saem em `src-tauri/target/release/bundle/`. Para gerar os três siste
 
 ```bash
 cd src-tauri
-cargo test -p phone-deck-core                      # parsers, otimizador, whitelist e SQLite (fixtures reais sanitizadas)
-cargo run -p phone-deck-core --example smoke        # leitura somente-leitura do aparelho conectado
+cargo test -p bancada-core                      # parsers, otimizador, whitelist e SQLite (fixtures reais sanitizadas)
+cargo run -p bancada-core --example smoke        # leitura somente-leitura do aparelho conectado
 ```
 
 ## Modelo de segurança

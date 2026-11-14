@@ -1,8 +1,8 @@
 //! Read-only smoke test against a connected device:
-//! `cargo run -p phone-deck-core --example smoke`
+//! `cargo run -p bancada-core --example smoke`
 //! Prints a compact summary of every collector + the optimizer output.
 
-use phone_deck_core::{adb, collectors as c, optimizer};
+use bancada_core::{adb, collectors as c, optimizer};
 
 fn main() {
     let devs = adb::devices().expect("adb");

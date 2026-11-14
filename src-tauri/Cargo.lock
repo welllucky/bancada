@@ -151,6 +151,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
+name = "bancada"
+version = "0.4.1"
+dependencies = [
+ "bancada-core",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-updater",
+]
+
+[[package]]
+name = "bancada-core"
+version = "0.4.1"
+dependencies = [
+ "apk-info",
+ "apk-info-axml",
+ "apk-info-xml",
+ "chrono",
+ "regex",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "wait-timeout",
+]
+
+[[package]]
 name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2674,33 +2701,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6fd9027e2d9319be6349febd1db4e8d02aa544921200c9b777720ac34a3aa89"
 dependencies = [
  "siphasher",
-]
-
-[[package]]
-name = "phone-deck"
-version = "0.3.0"
-dependencies = [
- "phone-deck-core",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-updater",
-]
-
-[[package]]
-name = "phone-deck-core"
-version = "0.3.0"
-dependencies = [
- "apk-info",
- "apk-info-axml",
- "apk-info-xml",
- "chrono",
- "regex",
- "rusqlite",
- "serde",
- "serde_json",
- "wait-timeout",
 ]
 
 [[package]]

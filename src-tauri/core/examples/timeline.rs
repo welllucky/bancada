@@ -1,8 +1,8 @@
-//! Resumo da linha do tempo de um UID num histórico salvo: `cargo run -p phone-deck-core --example timeline -- history.txt u0a369`
+//! Resumo da linha do tempo de um UID num histórico salvo: `cargo run -p bancada-core --example timeline -- history.txt u0a369`
 fn main() {
     let a: Vec<String> = std::env::args().skip(1).collect();
     let text = std::fs::read_to_string(&a[0]).unwrap();
-    let tl = phone_deck_core::apptimeline::parse_app_timeline(&text, &a[1..], 2026);
+    let tl = bancada_core::apptimeline::parse_app_timeline(&text, &a[1..], 2026);
     let mut by: std::collections::BTreeMap<(String, bool), (usize, i64)> = Default::default();
     for s in &tl.spans {
         let e = by.entry((s.kind.clone(), s.screen_off)).or_default();

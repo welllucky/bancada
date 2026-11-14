@@ -28,7 +28,7 @@ jobs:
           workspaces: "./src-tauri -> target"
       - name: Core tests (no webview needed)
         working-directory: src-tauri
-        run: cargo test -p phone-deck-core
+        run: cargo test -p bancada-core
 
   frontend:
     name: frontend build

@@ -29,7 +29,7 @@ const writeVersion = (version) => {
   // E no Cargo.lock, senão o primeiro `cargo build` depois do pull deixa a árvore suja.
   const lock = "src-tauri/Cargo.lock";
   let l = readFileSync(lock, "utf8");
-  for (const name of ["phone-deck", "phone-deck-core"]) {
+  for (const name of ["bancada", "bancada-core"]) {
     l = l.replace(new RegExp(`(\\nname = "${name}"\\nversion = )"[^"]*"`), `$1"${version}"`);
   }
   writeFileSync(lock, l);

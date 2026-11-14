@@ -1,15 +1,15 @@
 # AGENTS.md — Bancada (antigo Phone Deck)
 
-App desktop nativo (Tauri 2: Rust + React/TS no WebView do SO) que inspeciona e controla um Android conectado por USB via `adb`. Alvos: Linux, macOS, Windows a partir do mesmo código. UI em pt-BR. Nome do produto: **Bancada** (marca em `docs/marca/`); repositório, crates e `identifier` (`dev.wellington.phonedeck`) seguem com o nome antigo para não perder dados nem quebrar o atualizador. Tudo local: sem telemetria, sem rede além do `adb`. Única exceção: procurar/baixar atualização do próprio app nas releases do GitHub (`src-tauri/src/update.rs`), procura ao abrir (falha silenciosa) e instala só com confirmação.
+App desktop nativo (Tauri 2: Rust + React/TS no WebView do SO) que inspeciona e controla um Android conectado por USB via `adb`. Alvos: Linux, macOS, Windows a partir do mesmo código. UI em pt-BR. Nome do produto: **Bancada** (marca em `docs/marca/`); crates `bancada`/`bancada-core`, `identifier` `br.com.welllucky.bancada` (até a 0.3.0 era `dev.wellington.phonedeck`; `migrate_old_dir` em `lib.rs` move as pastas de dados e cache antigas na primeira abertura). Tudo local: sem telemetria, sem rede além do `adb`. Única exceção: procurar/baixar atualização do próprio app nas releases do GitHub (`src-tauri/src/update.rs`), procura ao abrir (falha silenciosa) e instala só com confirmação.
 
 Visão de produto e instruções de uso para humanos: `README.md`. Este arquivo cobre o que o código não conta sozinho.
 
 ## Arquitetura
 
-- `src-tauri/core/` — crate **`phone-deck-core`**, Rust puro, **sem dependência de Tauri/WebKit**. Toda a lógica vive aqui: `adb.rs` (execução), `parse.rs` (parsers de `dumpsys`/`top`/`ps`, funções puras), `collectors.rs` (chamam `adb` + `parse`), `optimizer.rs` (regras → recomendações), `actions.rs` (escritas permitidas), `history.rs` (SQLite). Existe separado para ser testável em qualquer máquina/CI sem webview.
+- `src-tauri/core/` — crate **`bancada-core`**, Rust puro, **sem dependência de Tauri/WebKit**. Toda a lógica vive aqui: `adb.rs` (execução), `parse.rs` (parsers de `dumpsys`/`top`/`ps`, funções puras), `collectors.rs` (chamam `adb` + `parse`), `optimizer.rs` (regras → recomendações), `actions.rs` (escritas permitidas), `history.rs` (SQLite). Existe separado para ser testável em qualquer máquina/CI sem webview.
 - `src-tauri/src/lib.rs` — casca fina: cada `#[tauri::command]` embrulha um coletor em `spawn_blocking`; thread de amostragem (bateria a cada 60 s, consumo por app a cada 30 min) grava no SQLite em `app_data_dir()/history.db`.
 - `src-tauri/src/main.rs` — workarounds de ambiente Linux antes de qualquer thread (ver _Armadilhas Linux_).
-- `src-tauri/core/src/icons.rs` — nome e ícone reais do app a partir do APK (manifesto + `resources.arsc` via `apk-info`): nome em pt-BR > pt > padrão; ícone adaptativo composto em SVG, senão o bitmap mais denso. `collectors::app_meta` guarda o resultado no catálogo `app_cache_dir()/apps` (`{pkg}.{hash do caminho}.json` + `labels.json`); a chave muda quando o caminho do APK muda (instalação/atualização), e os caminhos de todos os apps vêm de um único `pm list packages -f` (cache de 2 min), então abrir o app de novo não copia APK nenhum. Conferência visual: `cargo run -p phone-deck-core --example icon -- saida.html *.apk`.
+- `src-tauri/core/src/icons.rs` — nome e ícone reais do app a partir do APK (manifesto + `resources.arsc` via `apk-info`): nome em pt-BR > pt > padrão; ícone adaptativo composto em SVG, senão o bitmap mais denso. `collectors::app_meta` guarda o resultado no catálogo `app_cache_dir()/apps` (`{pkg}.{hash do caminho}.json` + `labels.json`); a chave muda quando o caminho do APK muda (instalação/atualização), e os caminhos de todos os apps vêm de um único `pm list packages -f` (cache de 2 min), então abrir o app de novo não copia APK nenhum. Conferência visual: `cargo run -p bancada-core --example icon -- saida.html *.apk`.
 - `src-tauri/core/src/wireless.rs` — depuração por Wi-Fi: mDNS, pareamento por código, conexão, `tcpip` a partir do cabo.
 - `src-tauri/core/src/netusage.rs` — rede: `dumpsys netstats detail` (consumo por período e por UID), `/proc/net/{tcp,udp}{,6}` (conexões com o UID dono) e `/proc/net/dev` (contadores; a UI calcula a taxa pela diferença). Formatos ainda sem fixture real do aparelho.
 - `src-tauri/core/src/apptimeline.rs` — linha do tempo por app a partir de `batterystats --history` (mesmo texto do gráfico de bateria, cache de 2 min): `top`/`fg`/`job`/`sync`/`wake_lock`/`longwake` viram intervalos, `wakeupap`/`tmpwhitelist` viram marcas, cada um com o estado da tela. `-wake_lock` costuma vir sem dono e fecha o wakelock aberto; só o primeiro a segurar o wakelock global aparece.
@@ -63,10 +63,10 @@ Versões fixadas em `mise.toml` (o CI usa o mesmo arquivo via `jdx/mise-action`)
 
 ## Verificação antes de concluir
 
-- `cargo test -p phone-deck-core` (em `src-tauri/`) — verde.
+- `cargo test -p bancada-core` (em `src-tauri/`) — verde.
 - `pnpm build` (tsc + vite) — verde.
 - Mudou `src-tauri/src` ou `tauri.conf.json`: `cargo build` em `src-tauri/` (no Fedora exige `webkit2gtk4.1-devel librsvg2-devel libappindicator-gtk3-devel`).
-- Com aparelho conectado: `cargo run -p phone-deck-core --example smoke` lê todos os coletores ao vivo (só leitura).
+- Com aparelho conectado: `cargo run -p bancada-core --example smoke` lê todos os coletores ao vivo (só leitura).
 
 ## Git e CI
 
