@@ -1,4 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import type { UpdateProgress } from "./types";
 import type { DeviceApi } from "./port";
 
 /** Adapter real: comandos Tauri que chamam o core Rust (adb). */
@@ -24,6 +26,16 @@ export const tauriAdapter: DeviceApi = {
   netLive: (serial) => invoke("net_live", { serial }),
   appMeta: (serial, pkg) => invoke("app_meta", { serial, package: pkg }),
   appLabels: () => invoke("app_labels"),
+  updateCheck: () => invoke("update_check"),
+  appVersion: () => invoke("app_version"),
+  updateInstall: async (onProgress) => {
+    const off = await listen<UpdateProgress>("update-progress", (e) => onProgress(e.payload));
+    try {
+      await invoke("update_install");
+    } finally {
+      off();
+    }
+  },
   appTimeline: (serial, pkg) => invoke("app_timeline", { serial, package: pkg }),
   wifiServices: () => invoke("wifi_services"),
   wifiPair: (addr, code) => invoke("wifi_pair", { addr, code }),

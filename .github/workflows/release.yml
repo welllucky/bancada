@@ -1,14 +1,49 @@
 name: release
 
+# Cada push na main calcula a próxima versão pelos Conventional Commits (scripts/release-version.mjs).
+# Se houver feat/fix/perf/breaking desde a última tag: testa, cria a tag vX.Y.Z, compila para Linux, macOS
+# (arm64 e x64) e Windows, publica a release com as notas e o latest.json do atualizador.
+# Nenhum commit é criado: a versão é gravada só na cópia de trabalho do build.
+#
+# Configuração no repositório (Settings › Secrets and variables › Actions):
+#   vars.RELEASE_REPO       opcional, `dono/repo` público onde publicar (padrão: este repositório)
+#   secrets.RELEASE_TOKEN   token com escrita em RELEASE_REPO (só quando ele for outro repositório)
+#   secrets.TAURI_SIGNING_PRIVATE_KEY / _PASSWORD   assinam as atualizações; sem eles a release sai sem atualizador
+
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  RELEASE_REPO: ${{ vars.RELEASE_REPO || github.repository }}
+
 jobs:
+  version:
+    runs-on: ubuntu-22.04
+    outputs:
+      release: ${{ steps.v.outputs.release }}
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: v
+        run: node scripts/release-version.mjs
+      - if: steps.v.outputs.release == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-notes
+          path: release-notes.md
+
   test:
     runs-on: ubuntu-22.04
     steps:
@@ -19,8 +54,34 @@ jobs:
         working-directory: src-tauri
         run: cargo test -p phone-deck-core
 
+  release:
+    needs: [version, test]
+    if: needs.version.outputs.release == 'true'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    outputs:
+      id: ${{ steps.r.outputs.id }}
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: release-notes
+      - name: Release em rascunho
+        id: r
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          args=(-f tag_name="$TAG" -f name="Phone Deck $TAG" -F body=@release-notes.md -F draft=true)
+          # No próprio repositório a tag aponta para o commit; num repo só de releases, para o branch padrão dele.
+          if [ "$RELEASE_REPO" = "$GITHUB_REPOSITORY" ]; then args+=(-f target_commitish="$GITHUB_SHA"); fi
+          id=$(gh api "repos/$RELEASE_REPO/releases" "${args[@]}" -q .id)
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
   build:
-    needs: test
+    needs: [version, test, release]
+    # Roda numa release, ou manualmente só para gerar os instaladores como artefatos.
+    if: always() && needs.test.result == 'success' && (needs.release.result == 'success' || github.event_name == 'workflow_dispatch')
     permissions:
       contents: write
     strategy:
@@ -58,19 +119,42 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Versão da release nos manifestos
+        if: needs.release.result == 'success'
+        shell: bash
+        run: node scripts/release-version.mjs --set "${{ needs.version.outputs.version }}"
+
+      - name: Atualizador (só com a chave de assinatura configurada)
+        id: up
+        shell: bash
+        run: |
+          if [ "${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}" = "true" ]; then
+            echo "args=--config src-tauri/tauri.updater.conf.json" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::TAURI_SIGNING_PRIVATE_KEY ausente: release sem atualização automática."
+          fi
+
+      - name: Dono e repositório da release
+        id: dest
+        shell: bash
+        run: |
+          echo "owner=${RELEASE_REPO%%/*}" >> "$GITHUB_OUTPUT"
+          echo "repo=${RELEASE_REPO#*/}" >> "$GITHUB_OUTPUT"
+
       - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-          releaseName: "Phone Deck ${{ github.ref_name }}"
-          releaseDraft: true
-          prerelease: false
+          releaseId: ${{ needs.release.outputs.id }}
+          owner: ${{ steps.dest.outputs.owner }}
+          repo: ${{ steps.dest.outputs.repo }}
           tauriScript: pnpm tauri
-          args: ${{ matrix.args }}
+          args: ${{ matrix.args }} ${{ steps.up.outputs.args }}
 
       - name: Upload bundles (manual runs)
-        if: github.ref_type != 'tag'
+        if: needs.release.result != 'success'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: phone-deck-${{ matrix.platform }}-${{ strategy.job-index }}
@@ -82,3 +166,23 @@ jobs:
             src-tauri/target/**/release/bundle/**/*.msi
             src-tauri/target/**/release/bundle/**/*.exe
           if-no-files-found: ignore
+
+  publish:
+    needs: [version, release, build]
+    if: needs.release.result == 'success' && needs.build.result == 'success'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Publica a release (o atualizador só enxerga releases publicadas)
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: gh api -X PATCH "repos/$RELEASE_REPO/releases/${{ needs.release.outputs.id }}" -F draft=false -f make_latest=true
+      # Num repo só de releases, a tag daqui marca o commit que virou versão (base da próxima).
+      # No próprio repositório, publicar a release já cria a tag no commit.
+      - name: Tag neste repositório
+        if: env.RELEASE_REPO != github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.version.outputs.tag }}
+        run: gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA"
