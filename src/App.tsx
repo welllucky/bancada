@@ -56,7 +56,7 @@ export default function App() {
 
   useEffect(() => {
     if (!isTauri()) {
-      setAdbError("Abra pelo aplicativo Phone Deck (npm run tauri dev) — o navegador não tem acesso ao ADB.");
+      setAdbError("Abra pelo aplicativo Phone Deck (pnpm tauri dev) — o navegador não tem acesso ao ADB.");
       return;
     }
     let alive = true;
