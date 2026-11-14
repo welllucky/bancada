@@ -259,6 +259,15 @@ async fn wifi_from_usb(state: tauri::State<'_, AppState>, serial: String) -> R<S
     .await?
 }
 
+/// Até a 0.3.0 o identificador era `dev.wellington.phonedeck`. Na primeira abertura com o identificador novo,
+/// a pasta antiga (histórico, catálogo de apps) é movida para a nova, se a nova ainda não existir.
+fn migrate_old_dir(new: &std::path::Path) {
+    let Some(old) = new.parent().map(|p| p.join("dev.wellington.phonedeck")) else { return };
+    if old.is_dir() && !new.exists() {
+        let _ = std::fs::rename(&old, new);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -266,6 +275,10 @@ pub fn run() {
         .manage(update::Pending::default())
         .setup(|app| {
             let dir = app.path().app_data_dir().expect("app data dir");
+            migrate_old_dir(&dir);
+            if let Ok(c) = app.path().app_cache_dir() {
+                migrate_old_dir(&c);
+            }
             let db = Db::open(&dir.join("history.db")).map_err(|e| e.to_string())?;
             let db = Arc::new(Mutex::new(db));
             start_sampler(db.clone());
