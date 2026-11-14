@@ -84,7 +84,7 @@ pub fn recommend(i: &Input) -> Vec<Recommendation> {
                 &format!("cpu-asleep-{pkg}"),
                 Severity::Critical,
                 &format!("{pkg} usando CPU com a tela desligada"),
-                "Com o aparelho em repouso, nenhum app deveria manter a CPU ocupada. Isso drena bateria e aquece. Forçar a parada interrompe o loop; se voltar, limpe o cache do app ou restrinja o segundo plano.".into(),
+                "Com o aparelho em repouso, nenhum app deveria manter a CPU ocupada. Isso drena bateria e aquece. Forçar a parada interrompe o loop; se voltar, restrinja o segundo plano do app.".into(),
                 format!("{:.0}% de CPU (PID {}) com estado {}", p.cpu, p.pid, i.wakefulness.unwrap_or("?")),
                 Some(Action::ForceStop { package: pkg.clone() }),
                 Some("Forçar parada"),
@@ -101,7 +101,7 @@ pub fn recommend(i: &Input) -> Vec<Recommendation> {
                     "screen-off-drain",
                     if ma > 120.0 { Severity::Critical } else { Severity::Warn },
                     "Consumo alto com a tela desligada",
-                    "Em repouso, um aparelho saudável consome 15–40 mA. Veja os wakelocks e jobs na aba Bateria para achar o responsável.".into(),
+                    "Em repouso, um aparelho saudável consome 15–40 mA. Veja em Diagnóstico › Bateria o que mantém o aparelho acordado para achar o responsável.".into(),
                     format!("{ma:.0} mA médio em {} de tela desligada ({:.0} mAh)", mins(sm.screen_off_s), sm.screen_off_mah.unwrap_or(0.0)),
                     None,
                     None,
@@ -202,7 +202,7 @@ pub fn recommend(i: &Input) -> Vec<Recommendation> {
         push("dexopt", Severity::Info, "Concluir otimização pós-atualização", "Após atualizar ou reiniciar, o Android recompila apps aos poucos. Rodar agora (de preferência carregando) evita esse gasto ao longo dos dias.".into(), "reinício recente".into(), Some(Action::BgDexopt), Some("Otimizar agora"));
     }
     if i.non_store_apps > 0 {
-        push("non-store", Severity::Info, "Apps fora da loja", "Revise os apps instalados fora da Play Store/Galaxy Store na aba Segurança. Apps restaurados do Samsung Cloud também aparecem aqui.".into(), format!("{} apps", i.non_store_apps), None, None);
+        push("non-store", Severity::Info, "Apps fora da loja", "Revise os apps instalados fora da Play Store/Galaxy Store em Aparelho › Segurança. Apps restaurados do Samsung Cloud também aparecem aqui.".into(), format!("{} apps", i.non_store_apps), None, None);
     }
 
     r.sort_by_key(|x| x.severity);
